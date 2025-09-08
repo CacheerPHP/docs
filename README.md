@@ -10,8 +10,8 @@ English
 - [Index](en/index.md)
 - [Getting Started](en/getting-started/index.md)
 - [Guides](en/guides/configuration.md)
-- [API](en/api/index.md) (plus overview, drivers, config, option-builder, time-builder, compression-encryption, cache-functions)
-- [Tutorials](en/tutorials/index.md) (split tutorials, including tagging)
+- [API](en/api/index.md)
+- [Tutorials](en/tutorials/index.md)
 
 Portuguese
 - [Index](pt/index.md)

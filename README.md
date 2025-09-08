@@ -15,9 +15,10 @@ English
 
 Portuguese
 - [Index](pt/index.md)
-- [Primeiros Passos](pt/getting-started/index.md)
+- [Primeiros Passos](pt/primeiros-passos/index.md)
+- [Guias](pt/guias/configuracao.md)
 - [API - com Funções de Cache em pt](pt/api/index.md)
-- [Tutoriais](pt/tutorials/index.md)
+- [Tutoriais](pt/tutoriais/index.md)
 
 Contributing
 - Keep links relative within the same language when possible

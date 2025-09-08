@@ -12,4 +12,3 @@ Tutoriais passo a passo para tarefas comuns com o CacheerPHP:
 - [Exemplo 08 — Saída String](./exemplo-08-saida-string.md)
 - [Exemplo 09 — Limpeza Automática (flushAfter)](./exemplo-09-limpeza-automatica.md)
 - [Exemplo 10 — Tagging e Invalidação por Tag](./exemplo-10-tagging.md)
-

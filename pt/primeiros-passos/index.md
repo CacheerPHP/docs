@@ -24,7 +24,7 @@ Copie o arquivo de exemplo e ajuste as variáveis conforme necessário:
 cp .env.example .env
 ```
 
-Veja todas as variáveis suportadas em `../../en/guides/configuration.md`.
+Veja todas as variáveis suportadas em `../guias/configuracao.md`.
 
 ## Início Rápido
 
@@ -63,4 +63,4 @@ if ($cache->isSuccess()) {
 ## Próximos Passos
 
 - [API](../api/index.md)
-- [Tutoriais](../tutorials/index.md)
+- [Tutoriais](../tutoriais/index.md)

@@ -7,14 +7,14 @@ Structure
 - pt: Portuguese documentation
 
 English
-- [Index]: en/index.md
-- [Getting Started]: en/getting-started/index.md
-- [Guides]: en/guides/configuration.md
-- [API]: en/api/index.md (plus overview, drivers, config, option-builder, time-builder, compression-encryption, cache-functions)
-- [Tutorials]: en/tutorials/index.md (split tutorials, including tagging)
+- [Index](en/index.md)
+- [Getting Started](en/getting-started/index.md)
+- [Guides](en/guides/configuration.md)
+- [API](en/api/index.md) (plus overview, drivers, config, option-builder, time-builder, compression-encryption, cache-functions)
+- [Tutorials](en/tutorials/index.md) (split tutorials, including tagging)
 
 Portuguese
-- [Index]: pt/index.md
+- [Index](pt/index.md)
 - [Primeiros Passos](pt/getting-started/index.md)
 - [API - com Funções de Cache em pt](pt/api/index.md)
 - [Tutoriais](pt/tutorials/index.md)

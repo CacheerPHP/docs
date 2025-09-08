@@ -1,2 +1,25 @@
-# docs
-CacheerPHP Official Docs
+# CacheerPHP Docs
+
+This repository contains the documentation for CacheerPHP. The content is organized by language and section to make it easy to navigate and to publish to a documentation site later.
+
+Structure
+- en: English documentation
+- pt: Portuguese documentation
+
+English
+- [Index]: en/index.md
+- [Getting Started]: en/getting-started/index.md
+- [Guides]: en/guides/configuration.md
+- [API]: en/api/index.md (plus overview, drivers, config, option-builder, time-builder, compression-encryption, cache-functions)
+- [Tutorials]: en/tutorials/index.md (split tutorials, including tagging)
+
+Portuguese
+- [Index]: pt/index.md
+- [Primeiros Passos](pt/getting-started/index.md)
+- [API - com Funções de Cache em pt](pt/api/index.md)
+- [Tutoriais](pt/tutorials/index.md)
+
+Contributing
+- Keep links relative within the same language when possible
+- Prefer adding new pages under the correct section (getting-started, guides, api, tutorials)
+- If adding Portuguese content without a translation, link to EN as a fallback from PT (and vice-versa)

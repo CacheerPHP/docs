@@ -8,6 +8,7 @@ Veja também:
 #### `setConfig()`
 
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 
@@ -24,6 +25,7 @@ Cacheer::setConfig();
 
 Configura o banco de dados para armazenar o cache.
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 
@@ -45,6 +47,7 @@ $driver: Driver do banco. Valores possíveis: 'mysql', 'pgsql', 'sqlite'.
 **Exemplo:**
 
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 
@@ -63,6 +66,7 @@ Timezone
 ---
 
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 

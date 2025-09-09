@@ -1,6 +1,8 @@
 # Exemplo 05 — Cache de Resposta de API
 
 ```php
+
+<?php
 require_once __DIR__ . "/../vendor/autoload.php";
 
 use Silviooosilva\\CacheerPhp\\Cacheer;

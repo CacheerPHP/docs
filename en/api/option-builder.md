@@ -18,6 +18,8 @@ Sets up the `Cacheer` instance with the provided options.
 
 - **Example**:
   ```php
+
+  <?php
   $cache = new Cacheer();
   $options = [
       'driver' => 'file',
@@ -35,6 +37,8 @@ Retrieves the current configuration options for the `Cacheer` instance.
 
 - **Example**:
   ```php
+
+  <?php
   $cache = new Cacheer();
   $options = $cache->getOptions();
   var_dump($options);
@@ -48,6 +52,7 @@ Each one initializes the configuration for a given driver and returns an instanc
 `forFile()`
 
 ```php
+
 <?php
 $Options = OptionBuilder::forFile();
 ```
@@ -65,6 +70,7 @@ build() → Finalizes the configuration and returns an array of options ready fo
 **Example of use**
 
 ```php
+
 <?php
 require_once __DIR__ . "/../vendor/autoload.php"; 
 
@@ -83,6 +89,7 @@ $Cacheer->setDriver()->useFileDriver(); //File Driver
 `forRedis()`
 
 ```php
+
 <?php
 $Options = OptionBuilder::forRedis()
     ->setNamespace('app:')
@@ -108,6 +115,7 @@ build() → Finalizes and returns an options array.
 `forDatabase()`
 
 ```php
+
 <?php
 $Options = OptionBuilder::forDatabase()
     ->table('cache_items')
@@ -139,6 +147,8 @@ Examples
 Redis with default TTL and auto-flush:
 
 ```php
+
+<?php
 $options = OptionBuilder::forRedis()
   ->setNamespace('app:')
   ->expirationTime('2 hours')
@@ -158,6 +168,8 @@ $cache->putCache('session_456', ['id' => 456], '', '10 minutes');
 Database with custom table, default TTL and auto-flush:
 
 ```php
+
+<?php
 $options = OptionBuilder::forDatabase()
   ->table('cache_items')
   ->expirationTime('30 minutes')

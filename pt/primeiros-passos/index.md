@@ -29,6 +29,8 @@ Veja todas as variáveis suportadas em `../guias/configuracao.md`.
 ## Início Rápido
 
 ```php
+
+<?php
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Silviooosilva\CacheerPhp\Cacheer;

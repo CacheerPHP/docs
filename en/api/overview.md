@@ -44,4 +44,4 @@ Group keys under tags and invalidate them efficiently across drivers.
 
 [API Reference - Cache Functions (tag/flushTag)](./cache-functions.md)
 
-See a complete usage example in: ../tutorials/example-10-tagging.md
+See a complete usage example in: [Tagging](../tutorials/example-10-tagging.md)

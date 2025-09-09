@@ -9,6 +9,8 @@ O TimeBuilder pode ser encadeado a partir dos builders de File, Redis e Database
 #### Uso simples (File)
 
 ```php
+
+<?php
 OptionBuilder::forFile()
     ->expirationTime('1 day')
     ->build();
@@ -16,6 +18,8 @@ OptionBuilder::forFile()
 Ou usando a abordagem encadeada do TimeBuilder:
 
 ```php
+
+<?php
 OptionBuilder::forFile()
     ->expirationTime()->day(1)
     ->build();
@@ -24,6 +28,8 @@ OptionBuilder::forFile()
 #### Uso com Redis e Database
 
 ```php
+
+<?php
 // TTL padrão de 10 minutos no Redis
 OptionBuilder::forRedis()
   ->expirationTime()->minute(10)
@@ -52,6 +58,8 @@ Cada método define um intervalo específico.
 #### Exemplo completo
 
 ```php
+
+<?php
 $Options = OptionBuilder::forFile()
     ->dir(__DIR__ . '/cache')
     ->expirationTime()->week(1)

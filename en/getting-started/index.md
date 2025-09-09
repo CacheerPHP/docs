@@ -29,6 +29,8 @@ See all supported environment variables in `../guides/configuration.md`.
 ## Quick Start
 
 ```php
+
+<?php
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Silviooosilva\CacheerPhp\Cacheer;

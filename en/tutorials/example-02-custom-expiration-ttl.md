@@ -1,6 +1,8 @@
 # Example 02 — Custom Expiration (TTL)
 
 ```php
+
+<?php
 require_once __DIR__ . "/../vendor/autoload.php";
 
 use Silviooosilva\\CacheerPhp\\Cacheer;

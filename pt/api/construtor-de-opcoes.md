@@ -107,6 +107,7 @@ build() → Finaliza e retorna as opções.
 `forDatabase()`
 
 ```php
+
 <?php
 $Options = OptionBuilder::forDatabase()
     ->table('cache_items')
@@ -137,6 +138,8 @@ Exemplos
 Redis com TTL padrão e auto-flush:
 
 ```php
+
+<?php
 $options = OptionBuilder::forRedis()
   ->setNamespace('app:')
   ->expirationTime('2 hours')
@@ -156,6 +159,8 @@ $cache->putCache('session_456', ['id' => 456], '', '10 minutes');
 Banco de dados com tabela customizada, TTL padrão e auto-flush:
 
 ```php
+
+<?php
 $options = OptionBuilder::forDatabase()
   ->table('cache_items')
   ->expirationTime('30 minutes')

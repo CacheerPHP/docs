@@ -44,5 +44,5 @@ Agrupe chaves sob tags e invalide de forma eficiente entre drivers.
 
 [Referência — Funções de Cache (tag/flushTag)](./funcoes-cache.md)
 
-Veja um exemplo completo em: ../tutoriais/exemplo-10-tagging.md
+Veja um exemplo completo em: [Tutorial de Tagging](../tutoriais/exemplo-10-tagging.md)
 

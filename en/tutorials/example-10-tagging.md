@@ -5,6 +5,7 @@ This example shows how to associate keys to tags and invalidate them in bulk acr
 ### File driver
 
 ```php
+
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 

@@ -4,6 +4,8 @@
 Ativa ou desativa a compressão dos dados antes do armazenamento. Quando ativada, os dados são serializados e comprimidos com `gzcompress`.
 
 ```php
+
+<?php
 $Cacheer->useCompression();        // habilita
 $Cacheer->useCompression(false);   // desabilita
 ```

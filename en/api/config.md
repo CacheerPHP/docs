@@ -8,6 +8,7 @@ Check it out below:
 #### `setConfig()`
 
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 
@@ -24,6 +25,7 @@ Cacheer::setConfig();
 
 Configures the database for storing the cache.
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 
@@ -45,6 +47,7 @@ $driver: Database driver. Possible values: 'mysql', 'pgsql', 'sqlite'.
 **Example:**
 
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 
@@ -63,6 +66,7 @@ Timezone
 ---
 
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 
@@ -79,6 +83,8 @@ Sets the time zone for cache operations.
 - Parameters
 
 ```php
+
+<?php
 $timezone: Time zone in PHP format (example: 'UTC', 'Africa/Luanda').
 ```
 

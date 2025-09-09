@@ -1,6 +1,8 @@
 # Exemplo 03 — Limpeza e Flush
 
 ```php
+
+<?php
 require_once __DIR__ . "/../vendor/autoload.php";
 
 use Silviooosilva\\CacheerPhp\\Cacheer;

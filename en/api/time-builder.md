@@ -9,6 +9,8 @@ TimeBuilder can be chained from File, Redis and Database builders to define valu
 #### Simple use (File)
 
 ```php
+
+<?php
 OptionBuilder::forFile()
     ->expirationTime('1 day')
     ->build();
@@ -16,6 +18,8 @@ OptionBuilder::forFile()
 Or use TimeBuilder's chained approach:
 
 ```php
+
+<?php
 OptionBuilder::forFile()
     ->expirationTime()->day(1)
     ->build();
@@ -24,6 +28,8 @@ OptionBuilder::forFile()
 #### Use with Redis and Database
 
 ```php
+
+<?php
 // Redis default TTL of 10 minutes
 OptionBuilder::forRedis()
   ->expirationTime()->minute(10)
@@ -52,6 +58,8 @@ Each method allows you to set a specific time interval.
 #### Full Example
 
 ```php
+
+<?php
 $Options = OptionBuilder::forFile()
     ->dir(__DIR__ . '/cache')
     ->expirationTime()->week(1)

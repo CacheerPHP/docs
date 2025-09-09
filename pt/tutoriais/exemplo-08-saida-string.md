@@ -1,6 +1,8 @@
 # Exemplo 08 — Saída String
 
 ```php
+
+<?php
 require_once  __DIR__  .  "/../vendor/autoload.php";
 use Silviooosilva\\CacheerPhp\\Cacheer;
 

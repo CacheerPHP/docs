@@ -5,6 +5,7 @@ Este exemplo mostra como associar chaves a tags e invalidá-las em lote em todos
 ### Driver de Arquivos
 
 ```php
+
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -41,6 +42,7 @@ Notas:
 ### Driver Redis
 
 ```php
+
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -67,6 +69,7 @@ Notas:
 ### Driver de Banco de Dados (MySQL/SQLite/PgSQL)
 
 ```php
+
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -95,6 +98,7 @@ Notas:
 ### Driver Array (memória)
 
 ```php
+
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 

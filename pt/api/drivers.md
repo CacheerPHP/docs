@@ -59,6 +59,7 @@ Cacheer::setDriver()->useRedisDriver();
 
 Definir driver baseado em Array (memória):
 ```php
+
 <?php
 
 require_once __DIR__ . "/../vendor/autoload.php"; 

@@ -1,6 +1,8 @@
 # Exemplo 06 — Saída JSON
 
 ```php
+
+<?php
 require_once  __DIR__  .  "/../vendor/autoload.php";
 use Silviooosilva\\CacheerPhp\\Cacheer;
 

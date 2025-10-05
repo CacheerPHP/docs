@@ -1,6 +1,6 @@
 # CacheerPHP Docs
 
-This repository contains the documentation for CacheerPHP. The content is organized by language and section to make it easy to navigate and to publish to a documentation site later.
+This repository contains the documentation for CacheerPHP.
 
 Structure
 - en: English documentation
@@ -12,7 +12,6 @@ English
 - [Guides](en/guides/configuration.md)
 - [API](en/api/index.md)
 - [Tutorials](en/tutorials/index.md)
-<!-- - [Monitor](en/monitor/index.md) (coming soon) -->
 - [Contributing](en/contributing/index.md)
 - [Updating](en/updating/index.md)
 
@@ -22,7 +21,6 @@ Portuguese
 - [Guias](pt/guias/configuracao.md)
 - [API](pt/api/index.md)
 - [Tutoriais](pt/tutoriais/index.md)
-<!-- - [Monitor](pt/monitor/index.md) (Brevemente) -->
 - [Guia de Contribuição](pt/contribuicao/index.md)
 - [Guia de Atualização](pt/atualizacao/index.md)
 

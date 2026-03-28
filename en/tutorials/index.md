@@ -12,4 +12,9 @@ Browse step-by-step tutorials for common CacheerPHP tasks:
 - [Example 08 — String Output Formatter](./example-08-string-output-formatter.md)
 - [Example 09 — Auto Flush (flushAfter)](./example-09-auto-flush.md)
 - [Example 10 — Tagging and tag invalidation](./example-10-tagging.md)
+- [Example 11 — PSR-16 SimpleCache Adapter](./example-11-psr16-adapter.md) *(v5.0.0)*
+- [Example 12 — DateInterval and null TTL](./example-12-dateinterval-ttl.md) *(v5.0.0)*
+- [Example 13 — Caching Falsy Values](./example-13-falsy-values.md) *(v5.0.0)*
+- [Example 14 — Conditional Store with add()](./example-14-add-conditional.md) *(v5.0.0)*
+- [Example 15 — Stats and Instance Management](./example-15-stats-instance.md) *(v5.0.0)*
 

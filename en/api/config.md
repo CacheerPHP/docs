@@ -1,130 +1,119 @@
-## API Reference
+# API Reference — Configuration
 
-Always define the driver to be used in the first instance, and only then define the settings using **setConfig()**.
+`setConfig()` returns a `CacheConfig` instance with methods for timezone, database connection, logger path, and option management.
 
-Check it out below:
-[API Reference - setDriver()](./drivers.md)
+> **Tip:** Always set the driver before configuring. See [Drivers](./drivers.md).
 
-#### `setConfig()`
+> **Note:** All methods can be called statically: `Cacheer::setConfig()->setTimeZone('UTC');`
 
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig();
-```
-
-```php
-Cacheer::setConfig();
-```
-
-> **Note:** Configuration methods can also be called statically, e.g. `Cacheer::setConfig()->setDatabaseConnection('mysql');`
-
-Configures the database for storing the cache.
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig()->setDatabaseConnection(string $driver)
-```
-
-```php
-Cacheer::setConfig()->setDatabaseConnection(string $driver);
-```
-
-- Parameters:
-
-```php
-$driver: Database driver. Possible values: 'mysql', 'pgsql', 'sqlite'.
-```
-
-**Example:**
-
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig()->setDatabaseConnection('mysql');
-```
-
-```php
-Cacheer::setConfig()->setDatabaseConnection('mysql');
-```
-
-There is also an alternative, which is to define the driver in the .env file, through the DB_CONNECTION variable, passing the same values.
-
-Timezone
 ---
 
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig()->setTimeZone(string $timezone);
-```
+## Database Connection
 
 ```php
-Cacheer::setConfig()->setTimeZone(string $timezone);
+$cache->setConfig()->setDatabaseConnection(string $driver): void
 ```
 
-Sets the time zone for cache operations.
-- Parameters
+Sets the PDO driver used for the Database cache store.
+
+| Parameter | Values | Default |
+|-----------|--------|---------|
+| `$driver` | `'mysql'`, `'pgsql'`, `'sqlite'` | From `.env` `DB_CONNECTION` |
 
 ```php
-
-<?php
-$timezone: Time zone in PHP format (example: 'UTC', 'Africa/Luanda').
+$cache->setConfig()->setDatabaseConnection('mysql');
+// or
+Cacheer::setConfig()->setDatabaseConnection('sqlite');
 ```
 
-**Example:**
+Alternatively, set `DB_CONNECTION` in your `.env` file.
 
-```php
-$Cacheer->setConfig()->setTimeZone('UTC');
-```
-
-```php
-Cacheer::setConfig()->setTimeZone('UTC');
-```
-
-Check out the timezones supported by PHP here: 
-https://www.php.net/manual/en/timezones.php
-
-Logger
 ---
 
-```php
-$Cacheer->setConfig()->setLoggerPath(string $path);
-```
+## Timezone
 
 ```php
-Cacheer::setConfig()->setLoggerPath(string $path);
+$cache->setConfig()->setTimeZone(string $timezone): CacheConfig
 ```
-Defines the path where the logs will be stored.
 
-- Parameters
+Sets the default timezone for cache expiry calculations. Must be a valid [PHP timezone identifier](https://www.php.net/manual/en/timezones.php).
 
 ```php
-$path: Caminho completo para o arquivo de logs.
+$cache->setConfig()->setTimeZone('UTC');
+$cache->setConfig()->setTimeZone('America/Sao_Paulo');
 ```
 
-**Example:**
+---
+
+## Logger Path
 
 ```php
-$Cacheer->setConfig()->setLoggerPath('/path/to/logs/CacheerPHP.log');
+$cache->setConfig()->setLoggerPath(string $path): Cacheer
 ```
 
+Defines the file path for the cache logger. The logger implements PSR-3 `\Psr\Log\AbstractLogger` (v5.0.0) and supports automatic log rotation.
+
 ```php
-Cacheer::setConfig()->setLoggerPath('/path/to/logs/CacheerPHP.log');
+$cache->setConfig()->setLoggerPath('/var/log/cacheer.log');
 ```
+
+---
+
+## Options Management *(v5.0.0)*
+
+### `setUp()` — Replace all options
+
+```php
+$cache->setUp(array $options): void
+// or via setConfig():
+$cache->setConfig()->setUp($options);
+```
+
+Replaces the entire options array. Commonly used with `OptionBuilder`:
+
+```php
+use Silviooosilva\CacheerPhp\Config\Option\Builder\OptionBuilder;
+
+$options = OptionBuilder::forFile()
+    ->dir(__DIR__ . '/cache')
+    ->expirationTime('2 hours')
+    ->build();
+
+$cache->setUp($options);
+```
+
+### `getOption()` — Read a single option *(new in v5)*
+
+```php
+$cache->getOption(string $key, mixed $default = null): mixed
+```
+
+Returns the value of a single configuration option, or `$default` if the key is not set.
+
+```php
+$dir = $cache->getOption('cacheDir', '/tmp/cache');
+```
+
+### `getOptions()` — Read current options
+
+```php
+$cache->getOptions(): array
+// or via setConfig():
+$cache->setConfig()->getOptions();
+```
+
+Returns the full options array.
+
+### `setOption()` — Set a single option *(new in v5)*
+
+```php
+$cache->setOption(string $key, mixed $value): Cacheer
+```
+
+### `setOptions()` — Replace all options *(new in v5)*
+
+```php
+$cache->setOptions(array $options): void
+```
+
+> **Note:** In v5.0.0, `$cache->options` is private. Use these accessors instead of direct property access.

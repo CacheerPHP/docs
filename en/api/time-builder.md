@@ -47,13 +47,13 @@ Each method allows you to set a specific time interval.
 
 | Method        | Description                      | Example       |
 |--------------|--------------------------------|--------------|
-| `second($value)` | Define o tempo em segundos  | `->second(30)` |
-| `minute($value)` | Define o tempo em minutos   | `->minute(15)` |
-| `hour($value)`   | Define o tempo em horas     | `->hour(3)`    |
-| `day($value)`    | Define o tempo em dias      | `->day(7)`     |
-| `week($value)`   | Define o tempo em semanas   | `->week(2)`    |
-| `month($value)`  | Define o tempo em meses     | `->month(1)`   |
-| `year($value)`   | Define o tempo em anos      | `->year(1)`    |
+| `second($value)` | Set time in seconds  | `->second(30)` |
+| `minute($value)` | Set time in minutes  | `->minute(15)` |
+| `hour($value)`   | Set time in hours    | `->hour(3)`    |
+| `day($value)`    | Set time in days     | `->day(7)`     |
+| `week($value)`   | Set time in weeks    | `->week(2)`    |
+| `month($value)`  | Set time in months   | `->month(1)`   |
+| `year($value)`   | Set time in years    | `->year(1)`    |
 
 #### Full Example
 

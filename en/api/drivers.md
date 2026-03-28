@@ -1,77 +1,109 @@
-## API Reference
+# API Reference — Drivers
 
-#### 2. Drivers
+`setDriver()` returns a `CacheDriver` instance that lets you select the cache backend. CacheerPHP ships with four drivers.
 
-```php
+> **Note:** All methods can be called statically: `Cacheer::setDriver()->useFileDriver();`
 
-<?php
+---
 
-require_once __DIR__ . "/../vendor/autoload.php"; 
+## Available Drivers
 
-$Cacheer = new Cacheer();
-$Cacheer->setDriver();
-```
+| Method | Backend | Best for | Requires |
+|--------|---------|----------|----------|
+| `useFileDriver()` | Local filesystem | General-purpose caching | `cacheDir` option |
+| `useDatabaseDriver()` | MySQL / PostgreSQL / SQLite | Shared cache across servers | PDO + `.env` config |
+| `useRedisDriver()` | Redis server | High-throughput / distributed | `predis/predis` + Redis |
+| `useArrayDriver()` | In-memory PHP array | Testing / short-lived scripts | Nothing |
+| `useDefaultDriver()` | File (auto-creates dir) | Zero-config quickstart | — |
 
-```php
-Cacheer::setDriver();
-```
+---
 
-> **Note:** The driver methods can also be called statically, e.g. `Cacheer::setDriver()->useFileDriver();`
+## Usage
 
-Defines the cache driver as file-based:
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setDriver()->useFileDriver();
-```
+### Instance
 
 ```php
-Cacheer::setDriver()->useFileDriver();
+$cache = new Cacheer();
+$cache->setDriver()->useFileDriver();
 ```
 
-Defines the cache driver as database-based:
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setDriver()->useDatabaseDriver();
-```
-
-```php
-Cacheer::setDriver()->useDatabaseDriver();
-```
-
-Sets the cache driver to be based on Redis:
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setDriver()->useRedisDriver();
-```
-
-```php
-Cacheer::setDriver()->useRedisDriver();
-```
-
-Sets the cache driver to be based on Arrays (Memory):
-```php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setDriver()->useArrayDriver();
-```
+### Static
 
 ```php
 Cacheer::setDriver()->useArrayDriver();
+```
+
+### With OptionBuilder
+
+```php
+use Silviooosilva\CacheerPhp\Config\Option\Builder\OptionBuilder;
+
+$options = OptionBuilder::forRedis()
+    ->setNamespace('app:')
+    ->expirationTime('2 hours')
+    ->build();
+
+$cache = new Cacheer($options);
+$cache->setDriver()->useRedisDriver();
+```
+
+---
+
+## Inspecting the Active Driver *(v5.0.0)*
+
+```php
+// Get the current driver instance
+$driver = $cache->getCacheStore();
+echo get_class($driver);
+// Silviooosilva\CacheerPhp\CacheStore\ArrayCacheStore
+
+// Switch the driver at runtime
+$cache->setCacheStore(new ArrayCacheStore($logPath));
+
+// Check via stats()
+$info = $cache->stats();
+echo $info['driver'];  // full class name of the active driver
+```
+
+---
+
+## Driver Details
+
+### File Driver
+
+Stores each cache item as a serialized file on disk. In v5.0.0, each file contains a JSON envelope with `{data, expires_at, ttl}` for per-item TTL support.
+
+```php
+$cache = new Cacheer(['cacheDir' => __DIR__ . '/cache']);
+// File driver is the default
+```
+
+### Database Driver
+
+Uses a PDO connection to store cache items in a database table. Configure connection details via `.env` or `setConfig()->setDatabaseConnection()`.
+
+```php
+$cache = new Cacheer();
+$cache->setConfig()->setDatabaseConnection('sqlite');
+$cache->setDriver()->useDatabaseDriver();
+```
+
+### Redis Driver
+
+Connects to a Redis server via `predis/predis`. Configure host, port, and password in `.env`.
+
+```php
+$cache = new Cacheer();
+$cache->setDriver()->useRedisDriver();
+```
+
+In v5.0.0, storing with `PHP_INT_MAX` TTL (forever) uses `SET` instead of `SETEX` to avoid Redis rejecting extremely large expiry values.
+
+### Array Driver
+
+Stores everything in a PHP array — data is lost when the process ends. Ideal for unit tests and CLI scripts.
+
+```php
+$cache = new Cacheer();
+$cache->setDriver()->useArrayDriver();
 ```

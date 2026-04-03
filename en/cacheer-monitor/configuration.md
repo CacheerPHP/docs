@@ -10,7 +10,7 @@ The monitor resolves the events file in this order:
 2. **`.env` file** — read from the project root (see `src/Support/Env.php`)
 3. **Fallback** — `sys_get_temp_dir()/cacheer-monitor.jsonl`
 
-Relative paths are resolved against the repository root.
+Relative paths are resolved against the consuming project root, never the monitor package directory under `vendor/`.
 
 ## Refresh Rate
 

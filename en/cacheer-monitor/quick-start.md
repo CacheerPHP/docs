@@ -81,19 +81,6 @@ Cacheer::removeListeners();
 
 ---
 
-## Generate Sample Data
-
-To produce a burst of events for demo or testing:
-
-```bash
-php Tests/scenarios.php
-php Tests/scenarios_advanced.php   # bursty load + error cases
-```
-
-Use the dashboard **Clear** button or `DELETE /api/events/clear` to reset recorded events.
-
----
-
 ## Legacy: Manual Registration
 
 Before v1.0.0, the recommended approach was to wrap the `Cacheer` instance manually or call `addListener` by hand. Both still work but are no longer needed for most projects:

@@ -5,7 +5,7 @@ Practical recipes for daily debugging or demos.
 ## Reset the Playground
 
 1. Run `POST /api/events/clear` (or click **Clear**).
-2. Replay `php Tests/scenarios.php`.
+2. Replay any example script or trigger events from your app.
 3. Open the dashboard and set the refresh interval to `1s` for live demos.
 
 ## Investigate a Slow Key

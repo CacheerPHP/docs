@@ -20,6 +20,18 @@ vendor/bin/cacheer-monitor serve --port=9966
 
 Open [http://127.0.0.1:9966](http://127.0.0.1:9966) in your browser and run your app normally — the dashboard updates in real time.
 
+> **Note:** If your project doesn't have a `.env` file, the monitor will still work — events will be stored in the system temp directory. For a persistent, predictable path, create a `.env` at your project root. You can use the one from the CacheerPHP package as a starting point:
+>
+> ```bash
+> cp vendor/silviooosilva/cacheer-php/.env.example .env
+> ```
+>
+> Then add the following line to set the events file path:
+>
+> ```env
+> CACHEER_MONITOR_EVENTS=/your/path/cacheer-monitor.jsonl
+> ```
+
 ---
 
 ## Custom Events File Path

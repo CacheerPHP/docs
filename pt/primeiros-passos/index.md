@@ -16,6 +16,12 @@ Instale via Composer:
 composer require silviooosilva/cacheer-php
 ```
 
+Quer instalar também o Cacheer Monitor? Use o bundle:
+
+```sh
+composer require silviooosilva/cacheer-php-bundle
+```
+
 ## Configuração
 
 Copie o arquivo de exemplo e ajuste as variáveis conforme necessário:

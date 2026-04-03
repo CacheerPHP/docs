@@ -4,7 +4,7 @@ Thanks for your interest in improving CacheerPHP! This guide explains how to get
 
 ## Prerequisites
 
-- PHP 8.1 or newer
+- PHP 8.2 or newer
 - Composer 2+
 - A Redis server if you want to exercise Redis-specific features (optional)
 - Node.js/npm if you plan to update the documentation site assets

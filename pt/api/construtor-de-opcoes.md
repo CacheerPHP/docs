@@ -26,6 +26,20 @@ Inicializa a instância de `Cacheer` com as opções informadas.
   $cache->setUp($options);
   ```
 
+#### `getOption(string $key, mixed $default = null): mixed`
+
+Retorna o valor de uma única opção de configuração, ou `$default` se a chave não existir.
+
+- Parâmetros:
+  - `$key`: Nome da opção.
+  - `$default`: Valor padrão retornado caso a chave não exista (padrão: `null`).
+
+- Exemplo:
+  ```php
+  $cache = new Cacheer();
+  $dir = $cache->getOption('cacheDir', '/tmp/cache');
+  ```
+
 #### `getOptions(): array`
 
 Retorna as opções atuais de configuração da instância `Cacheer`.
@@ -56,6 +70,7 @@ Métodos após `forFile()`
 
 ```
 dir(string $path) → Define o diretório onde os arquivos de cache serão armazenados.
+loggerPath(string $path) → Define o caminho do arquivo de log das operações de cache.
 expirationTime(string $time) → Define o tempo de expiração dos arquivos no cache.
 flushAfter(string $interval) → Define um intervalo para executar limpeza automática do cache.
 build() → Finaliza a configuração e retorna um array de opções pronto para uso.
@@ -69,6 +84,7 @@ require_once __DIR__ . "/../vendor/autoload.php";
 
 $Options = OptionBuilder::forFile()
     ->dir(__DIR__ . "/cache")
+    ->loggerPath(__DIR__ . "/logs/cache.log")
     ->expirationTime("2 hours")
     ->flushAfter("1 day")
     ->build();
@@ -85,6 +101,7 @@ $Cacheer->setDriver()->useFileDriver(); // File Driver
 <?php
 $Options = OptionBuilder::forRedis()
     ->setNamespace('app:')
+    ->loggerPath(__DIR__ . '/logs/cache.log')
     ->expirationTime('2 hours')
     ->flushAfter('1 day')
     ->build();
@@ -99,6 +116,7 @@ Métodos após `forRedis()`
 
 ```
 setNamespace(string $prefix) → Define o prefixo de namespace das chaves.
+loggerPath(string $path) → Define o caminho do arquivo de log das operações de cache.
 expirationTime(string $time) → Sinaliza um TTL padrão.
 flushAfter(string $interval) → Sinaliza um intervalo de auto-flush.
 build() → Finaliza e retorna as opções.
@@ -111,6 +129,7 @@ build() → Finaliza e retorna as opções.
 <?php
 $Options = OptionBuilder::forDatabase()
     ->table('cache_items')
+    ->loggerPath(__DIR__ . '/logs/cache.log')
     ->expirationTime('1 day')
     ->flushAfter('7 days')
     ->build();
@@ -125,6 +144,7 @@ Métodos após `forDatabase()`
 
 ```
 table(string $table) → Define a tabela de armazenamento.
+loggerPath(string $path) → Define o caminho do arquivo de log das operações de cache.
 expirationTime(string $time) → Sinaliza um TTL padrão.
 flushAfter(string $interval) → Sinaliza um intervalo de auto-flush.
 build() → Finaliza e retorna as opções.
@@ -142,6 +162,7 @@ Redis com TTL padrão e auto-flush:
 <?php
 $options = OptionBuilder::forRedis()
   ->setNamespace('app:')
+  ->loggerPath(__DIR__ . '/logs/cache.log')
   ->expirationTime('2 hours')
   ->flushAfter('1 day')
   ->build();
@@ -163,6 +184,7 @@ Banco de dados com tabela customizada, TTL padrão e auto-flush:
 <?php
 $options = OptionBuilder::forDatabase()
   ->table('cache_items')
+  ->loggerPath(__DIR__ . '/logs/cache.log')
   ->expirationTime('30 minutes')
   ->flushAfter('7 days')
   ->build();

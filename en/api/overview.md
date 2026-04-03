@@ -1,47 +1,93 @@
-## API Reference — Overview
+# API Reference — Overview
 
-## **Classes Principais**
+## Main Class
 
-```bash
+```
 Silviooosilva\CacheerPhp\Cacheer
 ```
 
-The package's main class, used for all caching operations.
+The facade class for all caching operations. Supports both instance usage (`$cache->method()`) and static calls (`Cacheer::method()`).
 
+---
 
-## **Methods**
+## Architecture at a Glance
 
-### 1. **Configuration**
+```
+Cacheer (facade)
+├── CacheMutator      — write operations (put, clear, flush, add, increment, tag)
+├── CacheRetriever    — read operations (get, getAll, getMany, remember)
+├── CacheConfig       — timezone, driver, logger path
+├── CacheDriver       — backend selection
+│   ├── FileCacheStore
+│   ├── DatabaseCacheStore
+│   ├── RedisCacheStore
+│   └── ArrayCacheStore
+├── Psr16CacheAdapter — PSR-16 CacheInterface wrapper (v5.0.0)
+└── CacheLogger       — PSR-3 AbstractLogger (v5.0.0)
+```
 
-#### `setConfig()`
-Starts a customized configuration for CacheerPHP.
+---
 
-[API Reference - setConfig()](./config.md)
+## API Sections
 
-### 2. **Drivers**
-It allows you to define the different backends available for use.
+### 1. Configuration
 
-[API Reference - setDriver()](./drivers.md)
+`setConfig()` returns a `CacheConfig` instance for timezone, database connection, and logger path.
 
-### 3. **OptionBuilder**
-The **OptionBuilder** simplifies configuration via fluent builders per driver:
-- `OptionBuilder::forFile()` → File options (`dir`, `expirationTime`, `flushAfter`)
-- `OptionBuilder::forRedis()` → Redis options (`setNamespace`, default `expirationTime`, `flushAfter` auto-flush)
-- `OptionBuilder::forDatabase()` → Database options (`table`, default `expirationTime`, `flushAfter` auto-flush)
+[Full reference](./config.md)
 
-Notes:
-- `expirationTime` acts as default TTL when you omit a TTL in `putCache()` (or pass 3600). Explicit TTL values other than 3600 override the default.
-- `flushAfter` triggers an auto-flush check when the store initializes; if the interval has elapsed, the store calls `flushCache()`.
+### 2. Drivers
 
-[API Reference - OptionBuilder](./option-builder.md)
-### 4. **Compression & Encryption**
-Built-in methods to reduce storage space and secure cached data.
+`setDriver()` returns a `CacheDriver` instance for selecting the backend.
 
-[API Reference - Compression & Encryption](./compression-encryption.md)
+| Method | Backend | Requires |
+|--------|---------|----------|
+| `useFileDriver()` | Local filesystem | `cacheDir` option |
+| `useDatabaseDriver()` | MySQL / PostgreSQL / SQLite | PDO + configured `.env` |
+| `useRedisDriver()` | Redis server | `predis/predis` |
+| `useArrayDriver()` | In-memory PHP array | Nothing (ideal for tests) |
 
-### 5. **Tagging**
-Group keys under tags and invalidate them efficiently across drivers.
+[Full reference](./drivers.md)
 
-[API Reference - Cache Functions (tag/flushTag)](./cache-functions.md)
+### 3. OptionBuilder
 
-See a complete usage example in: [Tagging](../tutorials/example-10-tagging.md)
+Fluent builders that eliminate typos and centralize configuration:
+
+- `OptionBuilder::forFile()` — `dir()`, `expirationTime()`, `flushAfter()`
+- `OptionBuilder::forRedis()` — `setNamespace()`, `expirationTime()`, `flushAfter()`
+- `OptionBuilder::forDatabase()` — `table()`, `expirationTime()`, `flushAfter()`
+
+[Full reference](./option-builder.md) | [TimeBuilder](./time-builder.md)
+
+### 4. Cache Functions
+
+All read/write operations, tagging, computed values, and diagnostics.
+
+[Full reference](./cache-functions.md)
+
+### 5. Compression & Encryption
+
+- `useCompression()` — gzip via `gzcompress`
+- `useEncryption(string $key)` — AES-256-CBC with random IV per write (v5.0.0)
+
+[Full reference](./compression-encryption.md)
+
+### 6. PSR-16 Adapter *(new in v5.0.0)*
+
+`Psr16CacheAdapter` wraps any `Cacheer` instance into a standard `\Psr\SimpleCache\CacheInterface`.
+
+[Full reference](./psr16-adapter.md)
+
+### 7. Diagnostics *(new in v5.0.0)*
+
+| Method | Description |
+|--------|-------------|
+| `stats()` | Returns driver class, compression flag, and encryption flag |
+| `getCacheStore()` | Returns the active `CacheerInterface` driver |
+| `setCacheStore($driver)` | Swaps the driver at runtime |
+| `getOption($key, $default)` | Returns a single option value, or `$default` if not set |
+| `getOptions()` | Returns the current options array |
+| `setOption($key, $value)` | Sets a single option |
+| `setOptions($array)` | Replaces all options |
+| `Cacheer::resetInstance()` | Clears the static singleton |
+| `Cacheer::setInstance($obj)` | Injects a custom singleton |

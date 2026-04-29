@@ -12,16 +12,15 @@ Thanks for your interest in improving CacheerPHP! This guide explains how to get
 ## Repository Structure
 
 ```
-CacheerPHP-Org/
+CacheerPHP/
 ├── CacheerPHP/            # Core library
 │   ├── src/
 │   ├── tests/
 │   └── ...
-├── cacheerphp.github.io/  # Published docs site (generated from /docs)
 └── docs/                  # Source Markdown (EN and PT)
 ```
 
-**Important**: update documentation in the `/docs` workspace. The website (`cacheerphp.github.io/resources/docs`) is derived from that content.
+**Important**: update documentation in the `/docs` workspace. The website is derived from that content.
 
 ## Setting Up Locally
 

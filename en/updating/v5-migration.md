@@ -152,7 +152,7 @@ $cache->setOptions([...]);           // replaces all options
 1. Update PHP to 8.2+
 2. Run `composer require silviooosilva/cacheer-php:^5.0`
 3. Search your codebase for `->cacheStore` and `->options` — replace with accessor methods
-4. Search for `->add(` calls — verify the return value logic is correct for the new semantics
+4. Search for `->add()` calls — verify the return value logic is correct for the new semantics
 5. If you use encryption, flush encrypted caches before deploying
 6. If you call `Cacheer::getOptions()` statically, switch to `Cacheer::setConfig()->getOptions()`
 7. If you check `toJson() === false`, switch to a try/catch for `\JsonException`

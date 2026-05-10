@@ -12,5 +12,6 @@ Resumo das principais APIs e links para os tópicos detalhados.
 Notas
 - `expirationTime` funciona como TTL padrão quando você não informa na `putCache()` (ou usa o padrão 3600). TTLs explícitos diferentes de 3600 prevalecem.
 - `flushAfter` habilita uma verificação de limpeza automática ao inicializar o store; se o intervalo tiver passado, o store chama `flushCache()`.
+- A v5.1.0 adiciona aliases de conveniência (`forget`, `pull`, `missing`), contexto fluente de namespace (`in()` / `namespace()` / `withoutNamespace()`), forma simples no `putMany()` e parâmetros opcionais `$default` / `$ttl` em `increment()` / `decrement()`. Veja [Funções de Cache → Adições da v5.1.0](./funcoes-cache.md#adições-da-v510-totalmente-compatíveis).
 
 Se preferir uma visão em página única, consulte [Visão Geral (PT)](./visao-geral.md) (índice legado).

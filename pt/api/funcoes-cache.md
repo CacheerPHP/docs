@@ -283,3 +283,95 @@ Each of the functions below now returns a boolean indicating the success of the 
 $Cacheer->isSuccess(); // Returns true or false
 $Cacheer->getMessage(); // Returns a message
 ```
+
+---
+
+## Adições da v5.1.0 (totalmente compatíveis)
+
+> Todas as adições da v5.1.0 são **opt-in** e **não-quebrantes**. Cada método, assinatura e tipo de retorno da v5.0.x continua funcionando exatamente como antes.
+
+### Aliases de conveniência — `forget()`, `pull()`, `missing()`
+
+```php
+$cache->forget(string $cacheKey, string $namespace = ''): bool
+$cache->pull(string $cacheKey, string $namespace = ''): mixed
+$cache->missing(string $cacheKey, string $namespace = ''): bool
+```
+
+- `forget()` — alias de `clearCache()`.
+- `pull()` — alias de `getAndForget()`; devolve o valor e remove a chave atomicamente. Retorna `null` em miss.
+- `missing()` — inverso de `has()`.
+
+```php
+$cache->putCache('temp', 'short-lived');
+
+$value = $cache->pull('temp');     // retorna 'short-lived'; chave removida
+$cache->missing('temp');           // true
+```
+
+### Contexto fluente de namespace — `in()` / `namespace()` / `withoutNamespace()`
+
+```php
+$cache->in(string $namespace): PendingCache
+$cache->namespace(string $namespace): PendingCache
+$cache->withoutNamespace(): PendingCache
+```
+
+Os três retornam um wrapper imutável `PendingCache` ligado a um namespace. A instância subjacente de `Cacheer` **nunca é mutada**, então é seguro usar via facade estática.
+
+```php
+$cache->in('users')->put('123', $user);
+$cache->in('users')->get('123');
+
+// Notação por ponto, duas formas equivalentes:
+$cache->in('users.123')->put('profile', $profile);
+$cache->in('users')->in('123')->put('profile', $profile);
+
+// Encadear "saindo" de um namespace previamente vinculado:
+$cache->in('tenant-a')->withoutNamespace()->put('shared', $value);
+```
+
+`PendingCache` expõe: `get`, `getMany`, `put`, `add`, `has`, `missing`, `forget`, `pull`, `remember`, `rememberForever`, mais as cadeias `in`, `namespace`, `withoutNamespace` e os acessores `getNamespace()` / `cacheer()`.
+
+### `putMany()` — forma associativa simples
+
+```php
+// Forma legada da v5.0.x (continua suportada):
+$cache->putMany([
+    ['cacheKey' => 'k1', 'cacheData' => 'v1'],
+    ['cacheKey' => 'k2', 'cacheData' => 'v2'],
+]);
+
+// Forma simples da v5.1.0:
+$cache->putMany([
+    'k1' => 'v1',
+    'k2' => 'v2',
+]);
+
+// Com namespace:
+$cache->putMany(['x' => 1, 'y' => 2], 'orders');
+```
+
+As duas formas podem ser misturadas na mesma chamada.
+
+### `increment()` / `decrement()` — default & TTL opcionais
+
+```php
+$cache->increment(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
+$cache->decrement(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
+```
+
+- Quando `$default === null` (o padrão legado), `increment()` / `decrement()` mantêm o comportamento da v5.0.x: chaves ausentes retornam `false`.
+- Quando `$default` é fornecido, chaves ausentes são **criadas** com `$default + $amount` (ou `$default - $amount` no `decrement`) e o `$ttl` opcional é aplicado.
+- `$ttl = null` significa *forever* — a vida útil de uma entrada já existente **não** é alterada por um increment, a menos que você passe um TTL explícito.
+- Valores falsy armazenados (`0`, `'0'`, …) são hits válidos. São reconhecidos via `isSuccess()`, não pelo truthiness do PHP, então `increment('counter')` funciona corretamente quando o valor armazenado é `0`.
+
+```php
+// Comportamento legado preservado:
+$cache->increment('missing'); // false
+
+// Opt-in da v5.1.0 (cria-no-miss):
+$cache->increment('hits', 1, '', 0);            // cria 'hits' = 1, retorna true
+$cache->increment('budget', 10, '', 100);       // ausente → começa do default 100, armazenado = 110
+$cache->increment('rate', 1, '', 0, '1 hour');  // cria-no-miss com TTL de 1h
+```

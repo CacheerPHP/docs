@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for all CacheerPHP v5.0.0 public classes and methods.
+Complete reference for all CacheerPHP v5.1.0 public classes and methods.
 
 ## Core
 
@@ -30,3 +30,4 @@ Complete reference for all CacheerPHP v5.0.0 public classes and methods.
 - `expirationTime` acts as a default TTL when you omit TTL in `putCache()` (or pass the implicit `3600`). Explicit TTL values other than `3600` override the default.
 - `flushAfter` enables an auto-flush check on store initialization; if the interval has elapsed the store will call `flushCache()`.
 - All TTL parameters now accept `int`, `string`, `\DateInterval`, or `null` *(new in v5)*.
+- v5.1.0 adds convenience aliases (`forget`, `pull`, `missing`), a fluent namespace context (`in()` / `namespace()` / `withoutNamespace()`), simple-form `putMany()`, and optional `$default` / `$ttl` for `increment()` / `decrement()`. See [Cache Functions → v5.1.0 Additions](./cache-functions.md#v510-additions-backwards-compatible).

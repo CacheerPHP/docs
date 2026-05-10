@@ -360,3 +360,97 @@ $psr = new Psr16CacheAdapter($cache, 'optional-namespace');
 $psr->set('key', 'value', 3600);
 $psr->get('key');
 ```
+
+---
+
+## v5.1.0 Additions (backwards-compatible)
+
+> All v5.1.0 additions are **opt-in** and **non-breaking**. Every method, signature, and return type from v5.0.x continues to work exactly as before.
+
+### Convenience aliases — `forget()`, `pull()`, `missing()`
+
+```php
+$cache->forget(string $cacheKey, string $namespace = ''): bool
+$cache->pull(string $cacheKey, string $namespace = ''): mixed
+$cache->missing(string $cacheKey, string $namespace = ''): bool
+```
+
+- `forget()` — alias for `clearCache()`.
+- `pull()` — alias for `getAndForget()`; returns the value and removes the key atomically. Returns `null` on miss.
+- `missing()` — inverse of `has()`.
+
+```php
+$cache->putCache('temp', 'short-lived');
+
+$value = $cache->pull('temp');     // returns 'short-lived', key is gone
+$cache->missing('temp');           // true
+$cache->forget('absent');          // safe no-op style call
+```
+
+### Fluent namespace context — `in()` / `namespace()` / `withoutNamespace()`
+
+```php
+$cache->in(string $namespace): PendingCache
+$cache->namespace(string $namespace): PendingCache
+$cache->withoutNamespace(): PendingCache
+```
+
+All three return an immutable `PendingCache` wrapper bound to a namespace. The underlying `Cacheer` is **never mutated**, so this is safe under the static facade.
+
+```php
+$cache->in('users')->put('123', $user);
+$cache->in('users')->get('123');
+
+// Dot notation, two equivalent forms:
+$cache->in('users.123')->put('profile', $profile);
+$cache->in('users')->in('123')->put('profile', $profile);
+
+// Chain away from a previously-bound namespace:
+$cache->in('tenant-a')->withoutNamespace()->put('shared', $value);
+```
+
+`PendingCache` exposes: `get`, `getMany`, `put`, `add`, `has`, `missing`, `forget`, `pull`, `remember`, `rememberForever`, plus chain methods `in`, `namespace`, `withoutNamespace` and the accessors `getNamespace()` / `cacheer()`.
+
+### `putMany()` — simple associative form
+
+```php
+// v5.0.x legacy form (still supported):
+$cache->putMany([
+    ['cacheKey' => 'k1', 'cacheData' => 'v1'],
+    ['cacheKey' => 'k2', 'cacheData' => 'v2'],
+]);
+
+// v5.1.0 simple form:
+$cache->putMany([
+    'k1' => 'v1',
+    'k2' => 'v2',
+]);
+
+// With namespace:
+$cache->putMany(['x' => 1, 'y' => 2], 'orders');
+```
+
+The two shapes can even be mixed in the same call.
+
+### `increment()` / `decrement()` — optional default & TTL
+
+```php
+$cache->increment(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
+$cache->decrement(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
+```
+
+- When `$default === null` (the legacy default), `increment()` / `decrement()` keep the v5.0.x behaviour: missing keys return `false`.
+- When `$default` is provided, missing keys are **created** with `$default + $amount` (or `$default - $amount` for `decrement`) and the optional `$ttl` is applied.
+- `$ttl = null` means *forever* — the lifetime of an already-existing entry is **not** changed by an increment unless you pass an explicit TTL.
+- Falsy stored values (`0`, `'0'`, …) are real cache hits. They are recognised via `isSuccess()`, not via PHP truthiness, so `increment('counter')` works correctly when the stored value is `0`.
+
+```php
+// Legacy behaviour preserved:
+$cache->increment('missing'); // false
+
+// v5.1.0 opt-in create-on-miss:
+$cache->increment('hits', 1, '', 0);            // creates 'hits' = 1, returns true
+$cache->increment('budget', 10, '', 100);        // missing → starts from default 100, stored = 110
+$cache->increment('rate', 1, '', 0, '1 hour');   // create-on-miss with 1h TTL
+```
+

@@ -184,6 +184,13 @@ $cache->increment('counter', 5);   // counter is now 5
 $cache->decrement('counter', 2);   // counter is now 3
 ```
 
+> **Atomic since v5.2.0.** These are read-modify-write operations, which lose
+> updates under concurrency. On any lockable driver (File, Database, Redis) each
+> update is now serialised on a per-key [lock](./locks.md), so concurrent
+> increments are applied exactly once. The signatures and return values are
+> unchanged. See also the optional `$default` / `$ttl` parameters under
+> [v5.1.0 Additions](#increment--decrement--optional-default--ttl).
+
 ---
 
 ## Computed Values
@@ -206,6 +213,14 @@ $stats = $cache->remember('dashboard:stats', new \DateInterval('PT5M'), function
 });
 ```
 
+> **Stampede-safe since v5.2.0.** On a miss the recompute is guarded by a per-key
+> single-flight [lock](./locks.md), so a burst of concurrent misses runs the
+> callback **once** (no cache stampede / dogpile) on any lockable driver. Waiters
+> re-check the cache and return the freshly-stored value. If the driver can't
+> lock or the lock isn't obtained in time, it falls back to an unguarded
+> compute — never worse than before. For values you'd rather serve *stale* than
+> block on, see [`flexible()`](#flexible--stale-while-revalidate).
+
 ### `rememberForever()` — Get-or-compute without expiration
 
 ```php
@@ -213,6 +228,37 @@ $cache->rememberForever(string $cacheKey, \Closure $callback): mixed
 ```
 
 Same as `remember()`, but stored with no expiration.
+
+### `flexible()` — Stale-while-revalidate
+
+*New in v5.2.0*
+
+```php
+$cache->flexible(
+    string $cacheKey,
+    int $fresh,
+    int $stale,
+    \Closure $callback
+): mixed
+```
+
+Get-or-compute with two horizons, so reads rarely block on recomputation:
+
+- **Fresh** (`< $fresh` seconds old) — the value is served directly.
+- **Stale** (`$fresh`..`$stale` seconds old) — the value is served *immediately*, while a single worker recomputes it in the background (single-flight).
+- **Expired** (`> $stale` seconds old) — the value is recomputed under a single-flight lock.
+
+Both the stale refresh and the cold recompute are stampede-protected — the callback never runs more than once at a time for a given key.
+
+```php
+// Serve a cached homepage; refresh it in the background once it is older than
+// 60s, and keep serving the cached copy for up to 10 minutes if needed.
+$html = $cache->flexible('home', fresh: 60, stale: 600, function () {
+    return renderHomepage();
+});
+```
+
+> The request that wins the refresh lock recomputes inline (and returns the fresh value); all other requests in the stale window return the cached value immediately. `$stale` must be greater than `$fresh`.
 
 ### `getAndForget()` — Retrieve and remove
 
@@ -453,4 +499,40 @@ $cache->increment('hits', 1, '', 0);            // creates 'hits' = 1, returns t
 $cache->increment('budget', 10, '', 100);        // missing → starts from default 100, stored = 110
 $cache->increment('rate', 1, '', 0, '1 hour');   // create-on-miss with 1h TTL
 ```
+
+---
+
+## v5.2.0 Additions (backwards-compatible)
+
+### Distributed locks — `lock()`
+
+```php
+$cache->lock(string $name, int $ttl = 60): \Silviooosilva\CacheerPhp\Support\CacheLock
+```
+
+A named, driver-backed mutex so only one process runs a critical section at a time. Acquire it manually, wait for it, or run a callback under it:
+
+```php
+// Run exclusively; others get false instead of running the callback.
+$cache->lock('rebuild-report', 30)->get(fn () => rebuildReport());
+
+// Wait up to 5s for the lock, then run.
+$cache->lock('export', 30)->block(5, fn () => generateExport());
+
+// Manual acquire / release.
+$lock = $cache->lock('job', 120);
+if ($lock->acquire()) {
+    try { runJob(); } finally { $lock->release(); }
+}
+```
+
+Backed natively by each driver — Redis `SET NX`, a Database locks table, or file `flock` — and available on the static facade (`Cacheer::lock(...)`). See the full [Distributed Locks reference](./locks.md).
+
+### Atomic `increment()` / `decrement()`
+
+Counter updates are now serialised on a per-key lock, so concurrent increments no longer lose updates on the File, Database, and Redis drivers. Signatures and behaviour are unchanged — see [Numeric operations](#increment--decrement--numeric-operations) above.
+
+### Stampede-safe `remember()` and `flexible()`
+
+[`remember()`](#remember--get-or-compute-with-ttl) now serialises a concurrent miss behind a per-key single-flight lock, so the callback runs once instead of once per request (no cache stampede). The new [`flexible()`](#flexible--stale-while-revalidate) adds stale-while-revalidate: serve fresh values directly, serve stale ones while a single worker refreshes, and recompute once expired. Both honour the fluent namespace context (`in('reports')->remember(...)`).
 

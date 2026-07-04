@@ -18,4 +18,6 @@ Browse step-by-step tutorials for common CacheerPHP tasks:
 - [Example 14 — Conditional Store with add()](./example-14-add-conditional.md) *(v5.0.0)*
 - [Example 15 — Stats and Instance Management](./example-15-stats-instance.md) *(v5.0.0)*
 - [Example 16 — Monitor Integration](./example-16-monitor-integration.md) *(v5.0.0)*
+- [Example 17 — Distributed Locks & Atomic Counters](./example-17-locks-atomic-counters.md) *(v5.2.0)*
+- [Example 18 — Stampede Protection & Stale-While-Revalidate](./example-18-stampede-and-swr.md) *(v5.2.0)*
 

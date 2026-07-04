@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for all CacheerPHP v5.1.0 public classes and methods.
+Complete reference for all CacheerPHP v5.2.0 public classes and methods.
 
 ## Core
 
@@ -24,6 +24,7 @@ Complete reference for all CacheerPHP v5.1.0 public classes and methods.
 |------|-------------|
 | [Compression & Encryption](./compression-encryption.md) | gzip compression and AES-256-CBC encryption |
 | [PSR-16 Adapter](./psr16-adapter.md) | `Psr16CacheAdapter` — standard SimpleCache interface *(new in v5)* |
+| [Distributed Locks](./locks.md) | `lock()` — a named, driver-backed mutex *(new in v5.2.0)* |
 
 ## Notes
 
@@ -31,3 +32,4 @@ Complete reference for all CacheerPHP v5.1.0 public classes and methods.
 - `flushAfter` enables an auto-flush check on store initialization; if the interval has elapsed the store will call `flushCache()`.
 - All TTL parameters now accept `int`, `string`, `\DateInterval`, or `null` *(new in v5)*.
 - v5.1.0 adds convenience aliases (`forget`, `pull`, `missing`), a fluent namespace context (`in()` / `namespace()` / `withoutNamespace()`), simple-form `putMany()`, and optional `$default` / `$ttl` for `increment()` / `decrement()`. See [Cache Functions → v5.1.0 Additions](./cache-functions.md#v510-additions-backwards-compatible).
+- v5.2.0 adds [distributed locks](./locks.md) (`lock()`, on every driver), makes `increment()` / `decrement()` **atomic**, makes `remember()` **stampede-safe**, and adds `flexible()` for **stale-while-revalidate**. See [Cache Functions → v5.2.0 Additions](./cache-functions.md#v520-additions-backwards-compatible).

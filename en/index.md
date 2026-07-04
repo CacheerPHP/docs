@@ -1,6 +1,6 @@
 # CacheerPHP Documentation
 
-**Current version: 5.0.0** | PHP 8.2+ | [Changelog](./updating/v5-migration.md)
+**Current version: 5.2.0** | PHP 8.2+ | [Changelog](./updating/v5-migration.md)
 
 CacheerPHP is a lightweight, driver-agnostic caching library for PHP. It ships with four built-in backends (File, Database, Redis, Array), a fluent configuration API, optional compression and AES-256-CBC encryption, PSR-16 compliance, and PSR-3 logging — all behind a single, consistent interface.
 
@@ -17,6 +17,14 @@ CacheerPHP is a lightweight, driver-agnostic caching library for PHP. It ships w
 | [Upgrading to v5](./updating/v5-migration.md) | Breaking changes, new features, and migration steps |
 | [Contributing](./contributing/index.md) | How to set up, test, and submit pull requests |
 | [Updating](./updating/index.md) | General upgrade procedures |
+
+## What's New in v5.2.0
+
+- **Distributed locks** — `Cacheer::lock('name')` returns a driver-backed mutex (`acquire`, `release`, `block`, `get`) so only one process runs a critical section at a time. Native on Redis (`SET NX`), Database (locks table), and File (`flock`); see [Distributed Locks](./api/locks.md).
+- **Atomic `increment()` / `decrement()`** — counter updates are serialised on a per-key lock, so concurrent increments no longer lose updates.
+- **Stampede-safe `remember()`** — a concurrent miss now runs the callback once instead of once per request (no dogpile).
+- **`flexible()` — stale-while-revalidate** — serve fresh values directly, serve stale ones while a single worker refreshes, recompute once expired. See [Cache Functions → flexible()](./api/cache-functions.md#flexible--stale-while-revalidate).
+- **Database falsy-value fix** — storing over an existing `0` / `false` / `''` value on the Database driver now updates correctly instead of failing.
 
 ## What's New in v5.0.0
 

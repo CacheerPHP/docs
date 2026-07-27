@@ -1,8 +1,32 @@
 # CacheerPHP Documentation
 
-**Current version: 5.2.0** | PHP 8.2+ | [Changelog](./updating/v5-migration.md)
+**Current version: 6.0** | PHP 8.3+ | [Migration guide](./updating/index.md)
 
-CacheerPHP is a lightweight, driver-agnostic caching library for PHP. It ships with four built-in backends (File, Database, Redis, Array), a fluent configuration API, optional compression and AES-256-CBC encryption, PSR-16 compliance, and PSR-3 logging — all behind a single, consistent interface.
+CacheerPHP 6 is an **instance-first** cache: a small `Cache` kernel over a
+minimal four-method `Store` contract, with everything else — batching, tags,
+locks, atomic counters, tiering, resilience, encryption — an **optional
+capability** you opt into. There is no global state and no autoload-time side
+effect. v5 code keeps working through the `LegacyCacheer` bridge.
+
+---
+
+## What's New in v6.0
+
+- **Instance-first kernel.** Explicit `Cache` and immutable `ScopedCache` over
+  typed `Key`, `Scope`, `Ttl`, and `CacheEntry`; time is an injected `Clock`.
+- **Tiny core, honest capabilities.** A store implements four methods; extra
+  behavior is declared by interface and checked at runtime, so a backend never
+  fakes a guarantee it can't make.
+- **Composable decorators.** Tiered (L1/L2), resilient (circuit-breaker
+  fallback), and instrumented (typed events + metrics) wrap any store.
+- **Stampede protection.** Single-flight `remember()` and stale-while-revalidate
+  `flexible()` are built in.
+- **Authenticated storage.** serialize → optional gzip → optional AES-256-GCM
+  into a versioned, tamper-evident envelope, with key rotation.
+- **Standards & tooling.** PSR-16 and PSR-6 adapters, PSR-3 logging, a PSR-14
+  bridge, and a `cacheer` operations CLI.
+- **Migration.** `LegacyCacheer` bridge, an optional Rector rename set, and
+  rewrite-on-read for v5 payloads. See the [migration guide](./updating/index.md).
 
 ---
 

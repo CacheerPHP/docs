@@ -1,121 +1,88 @@
-# Upgrading to CacheerPHP 6
+# Updating CacheerPHP
 
-CacheerPHP 6 is an instance-first rewrite. You can upgrade in one of two ways:
+This guide walks you through upgrading CacheerPHP while keeping existing projects stable.
 
-1. **Bridge first, then modernize.** Swap your v5 object for the `LegacyCacheer`
-   bridge — it keeps the v5 method names — then move call sites to the `Cache`
-   API at your own pace.
-2. **Rewrite directly.** Replace call sites using the mapping below.
+## 1. Review the changelog
 
-## 1. Install
+Before changing dependencies, check:
 
-```sh
-composer require silviooosilva/cacheer-php:^6.0
-```
+- The release notes on GitHub
+- `CHANGELOG.md` inside the package
+- Breaking changes highlighted in pull requests
 
-v6 requires PHP 8.3+. The core installs with no backend clients; `ArrayStore`
-and `FileStore` work out of the box. Redis and PDO drivers stay optional
-(Composer `suggest`).
-
-## 2. Construction: driver selection becomes a named constructor
-
-| v5 | v6 |
-|---|---|
-| `(new Cacheer())->setDriver()->useFileDriver()` | `Cache::file('/var/cache')` |
-| `->useDatabaseDriver()` | `Cache::database($pdo, 'cacheer')` |
-| `->useRedisDriver()` | `Cache::redis($connection)` |
-| array driver / tests | `Cache::inMemory()` |
-
-The database schema is **never** created implicitly — run
-`DatabaseStoreSchema::migrate($pdo, $table)` (or `cacheer migrate`) once.
-
-## 3. Method mapping
-
-| v5 | v6 | Notes |
-|---|---|---|
-| `putCache($k, $v, $ns, $ttl)` | `set($k, $v, $ttl)` | Namespace becomes `scope($ns)->set(...)` |
-| `forever($k, $v)` | `set($k, $v, null)` | `null` TTL = forever |
-| `getCache($k, $ns, $ttl)` | `get($k)` | Read-time TTL removed |
-| `clearCache($k, $ns)` | `delete($k)` | `scope($ns)->delete(...)` |
-| `flushCache()` | `clear()` | Limited to the configured keyspace |
-| `getAndForget()` / `pull()` | `pull()` (bridge) | Atomicity reported by capability |
-| `has()` / `missing()` | `has()` | — |
-| positional namespace | `scope('name')` | Returns a scoped cache |
-| `tag($tag, ...$keys)` | `TaggableStore::tag()` | Capability, not core |
-| `increment()` / `decrement()` | `AtomicStore::increment()` | Capability, not core |
-| `isSuccess()` | `entry()->isHit()` or return value | Removed from core state |
-| `remember()` / `flexible()` | `remember()` / `flexible()` | Same intent, injected clock |
-
-### Automated renames (Rector)
-
-An optional Rector set ships at `rector.php` in the package. It renames the
-straightforward v5 methods; it does **not** rewrite construction, move the
-namespace argument onto `scope()`, or drop the read-time TTL — do those by hand.
+## 2. Update the library
 
 ```sh
-composer require rector/rector --dev
-vendor/bin/rector process src --config vendor/silviooosilva/cacheer-php/rector.php --dry-run
+composer update silviooosilva/cacheer-php
 ```
 
-## 4. The compatibility bridge
+If you pin versions in `composer.json`, bump the constraint first (for example `^2.4` → `^2.5`).
 
-```php
-use Silviooosilva\CacheerPhp\Compat\LegacyCacheer;
+After updating, clear Composer’s cache if you run into lock file conflicts:
 
-$cache = LegacyCacheer::file('/var/cache');   // or ::inMemory()
-$cache->putCache('user:1', $user, 'accounts', 3600);
-$user = $cache->getCache('user:1', 'accounts');
+```sh
+composer clear-cache
+rm composer.lock
+composer update
 ```
 
-Enable deprecations in development to locate call sites — they are **silent by
-default**:
+## 3. Run the test suite
 
-```php
-$cache = LegacyCacheer::file('/var/cache', emitDeprecations: true);
+Always verify your project:
+
+- `composer test`
+- `composer lint`
+- `composer analyse`
+
+<!-- If your project uses the Monitor, replay the synthetic scenarios:
+
+```sh
+php cacheer-monitor/Tests/stress_test.php
+php cacheer-monitor/Tests/stress_io.php
+```
+-->
+
+## 4. Refresh configuration & assets
+
+- Re-run your configuration scripts if new env vars were introduced
+- Clear cache directories (`rm -rf storage/cache` or similar)
+<!-- - Rebuild frontend bundles (if you bundle the monitor with your app) -->
+
+<!--
+## 5. Update Cacheer Monitor
+
+Inside `cacheer-monitor/`:
+
+```sh
+composer install
+php bin/cacheer-monitor serve --host=127.0.0.1 --port=9966
 ```
 
-## 5. Data compatibility and rewrite-on-read
+The Monitor CLI shares the same semantic version as the library; keep them aligned.
+-->
 
-v6 writes an authenticated, versioned envelope but can still **read** v5 values
-during the migration window. Construct the pipeline with a `V5PayloadReader`
-matching the compression/encryption your v5 app used, and opt into
-rewrite-on-read to re-encode legacy values in the v6 envelope on read:
+## 6. Verify integrations
 
-```php
-$pipeline = PipelineConfig::default()->withV5Reader(new V5PayloadReader(compression: true));
-$store = new FileStore('/var/cache', $pipeline->codec(), migrateLegacyOnRead: true);
+- Applications using Redis: ensure new commands are available
+- Framework integrations: run feature tests (Laravel, Symfony, etc.)
+- Custom reporters: re-run logging and queue pipelines
+
+## 7. Rollback plan
+
+Keep the previous lock file and vendor directory until you are confident the new version works. If something fails:
+
+```sh
+git checkout composer.json composer.lock
+composer install
 ```
 
-- v5's AES-256-**CBC** payloads are unauthenticated; a wrong key surfaces as a
-  failed `unserialize`, not cryptographically. New writes use the authenticated
-  v6 envelope.
-- `FileStore` and `DatabaseStore` support rewrite-on-read; Redis entries migrate
-  on their next write.
+## 8. Report issues
 
-## 6. Database migration and rollback
+If you hit problems, open an issue with:
 
-```php
-use Silviooosilva\CacheerPhp\Stores\Support\DatabaseStoreSchema;
+- Version before and after
+- OS/PHP version
+- Stack trace or failing test case
+- Steps to reproduce
 
-DatabaseStoreSchema::migrate($pdo, 'cacheer'); // idempotent
-DatabaseStoreSchema::drop($pdo, 'cacheer');    // rollback = drop (cache is derived data)
-```
-
-Preview the DDL without executing: `cacheer migrate --dry-run`.
-
-## 7. Verify
-
-- `composer test`, `composer lint`, `composer analyse`
-- Re-run your feature tests (framework integrations, Redis command availability)
-
-## 8. Rollback plan
-
-The v6 rewrite-on-read is opt-in, so a read-only rollout never mutates v5 data.
-To fall back: pin `^5.2` again, keep the previous lock file/vendor directory, and
-clear any v6-only envelopes (`cacheer clear --force`).
-
-## Support window
-
-- **v6** is the actively developed line.
-- **v5** receives security and correctness fixes only for 12 months after the
-  6.0 stable release.
+Up-to-date projects benefit from the latest optimisations and security patches—thanks for keeping CacheerPHP current!

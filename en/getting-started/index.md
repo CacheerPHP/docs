@@ -1,21 +1,15 @@
 # Getting Started
 
-CacheerPHP 6 is an instance-first cache: a small `Cache` kernel over a minimal
-`Store` contract, with optional capabilities (batch, tags, locks, atomic
-counters), composable decorators (tiered, resilient, instrumented), a versioned
-authenticated storage pipeline, and PSR-16/PSR-6 adapters.
+CacheerPHP is a lightweight PHP caching library with four storage backends (File, Database, Redis, Array), flexible TTL handling, optional compression and AES-256-CBC encryption, PSR-16 compliance, and a fluent OptionBuilder.
 
 ## Requirements
 
 | Requirement | Details |
 |-------------|---------|
-| **PHP** | 8.3 or newer |
-| **Optional** | `ext-openssl` (AES-256-GCM encryption), `ext-zlib` (gzip) |
-| **Optional** | `ext-pdo` + a PDO driver for the database store |
-| **Optional** | `predis/predis` or `ext-redis` for the Redis store |
-
-The core installs and runs with the Array and File stores using **none** of the
-optional pieces.
+| **PHP** | 8.2 or newer |
+| **Extensions** | `ext-openssl`, `ext-zlib`, `ext-pdo` |
+| **Optional** | PDO drivers for MySQL, PostgreSQL, or SQLite |
+| **Optional** | Redis server + `predis/predis` for the Redis backend |
 
 ## Installation
 
@@ -23,105 +17,109 @@ optional pieces.
 composer require silviooosilva/cacheer-php
 ```
 
-This pulls in the PSR contracts automatically (`psr/simple-cache`, `psr/cache`,
-`psr/log`, `psr/event-dispatcher`).
+This will pull in the required PSR packages automatically (`psr/simple-cache` ^3.0, `psr/log` ^3.0).
 
-## Quick Start
+## Quick Start — Instance Usage
 
 ```php
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-// Dependency-free, in-process (great for tests and short CLI runs).
-$cache = Cache::inMemory();
+// 1. Create a Cacheer instance with the File driver
+$cache = new Cacheer(['cacheDir' => __DIR__ . '/cache']);
 
-// Write with a TTL: seconds, "10 minutes", a DateInterval, or null (forever).
-$cache->set('user:123', ['name' => 'John Doe'], ttl: '10 minutes');
+// 2. Store a value (TTL defaults to 3600 seconds)
+$cache->putCache('user:123', ['name' => 'John Doe', 'email' => 'john@example.com']);
 
-// Read (returns the default on a miss).
-$user = $cache->get('user:123', default: null);
+// 3. Retrieve it
+if ($cache->isSuccess()) {
+    $user = $cache->getCache('user:123');
+    print_r($user);
+} else {
+    echo $cache->getMessage();
+}
 
-// Compute-once: run the callback on a miss, store and return it.
-$report = $cache->remember('report:daily', ttl: 3600, callback: fn () => build_report());
+// 4. Check existence
+$cache->has('user:123');  // sets isSuccess() to true/false
 
-// Existence and deletion.
-$cache->has('user:123');   // true
-$cache->delete('user:123');
+// 5. Remove a single key or flush everything
+$cache->clearCache('user:123');
+$cache->flushCache();
 ```
 
-## Choosing a store
+## Quick Start — Static Facade
 
-Swap the store, keep the API:
+Every method can also be called statically. CacheerPHP manages a shared singleton behind the scenes.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+<?php
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::inMemory();                    // in-process array store
-$cache = Cache::file('/var/cache/app');        // persistent, dependency-free
-$cache = Cache::database($pdo, 'cacheer');     // inject your own PDO
-$cache = Cache::redis($connection);            // predis or phpredis adapter
+Cacheer::setConfig()->setTimeZone('UTC');
+Cacheer::setDriver()->useArrayDriver();
+
+Cacheer::putCache('greeting', 'Hello, world!');
+echo Cacheer::getCache('greeting');  // Hello, world!
 ```
 
-Create the database schema explicitly first (never a side effect):
+## Choosing a Driver
 
 ```php
-use Silviooosilva\CacheerPhp\Stores\Support\DatabaseStoreSchema;
+$cache = new Cacheer();
 
-DatabaseStoreSchema::migrate($pdo, 'cacheer');
+// File (default) — stores serialized files on disk
+$cache->setDriver()->useFileDriver();
+
+// Database — MySQL, PostgreSQL, or SQLite via PDO
+$cache->setDriver()->useDatabaseDriver();
+
+// Redis — requires a running Redis server
+$cache->setDriver()->useRedisDriver();
+
+// Array — in-memory, ideal for testing
+$cache->setDriver()->useArrayDriver();
 ```
 
-## Scopes
+## TTL (Time-To-Live)
 
-Scopes replace stringly namespaces with isolated keyspaces you can clear on
-their own:
+v5.0.0 accepts four TTL formats anywhere a TTL is expected:
 
 ```php
-$cache->scope('reports')->set('daily', $rows);
-$cache->scope('billing')->set('daily', $invoice); // independent entry
-$cache->scope('reports')->clear();                // clears only that scope
+// Integer — seconds
+$cache->putCache('key', $data, ttl: 3600);
+
+// String — human-readable
+$cache->putCache('key', $data, ttl: '2 hours');
+
+// DateInterval — PHP native
+$cache->putCache('key', $data, ttl: new \DateInterval('PT30M'));
+
+// null — store forever (PHP_INT_MAX)
+$cache->putCache('key', $data, ttl: null);
 ```
 
-## TTL formats
+## PSR-16 SimpleCache
 
-A TTL can be an int (seconds), a human string, a `DateInterval`, or `null`
-(forever):
+Wrap any Cacheer instance in the PSR-16 adapter for framework interoperability:
 
 ```php
-$cache->set('key', $data, ttl: 3600);
-$cache->set('key', $data, ttl: '2 hours');
-$cache->set('key', $data, ttl: new \DateInterval('PT30M'));
-$cache->set('key', $data, ttl: null); // forever
+use Silviooosilva\CacheerPhp\Psr\Psr16CacheAdapter;
+
+$psr = new Psr16CacheAdapter($cache);
+
+$psr->set('token', 'abc123', 1800);
+$psr->get('token');           // 'abc123'
+$psr->has('token');           // true
+$psr->delete('token');
 ```
 
-## PSR adapters
-
-```php
-use Silviooosilva\CacheerPhp\Psr\{Psr16Cache, Psr6Pool};
-
-$psr16 = new Psr16Cache($cache);        // Psr\SimpleCache\CacheInterface
-$pool  = new Psr6Pool($cache, $clock);  // Psr\Cache\CacheItemPoolInterface
-```
-
-## Coming from v5?
-
-The `LegacyCacheer` bridge exposes the v5 method surface on the v6 engine, so you
-can upgrade incrementally:
-
-```php
-use Silviooosilva\CacheerPhp\Compat\LegacyCacheer;
-
-$cache = LegacyCacheer::file('/var/cache'); // or ::inMemory()
-$cache->putCache('user:1', $user, 'accounts', 3600);
-$user = $cache->getCache('user:1', 'accounts');
-```
-
-See the [migration guide](../updating/index.md) for the full mapping.
+See the full [PSR-16 Adapter reference](../api/psr16-adapter.md).
 
 ## Next Steps
 
-- [Migration guide](../updating/index.md) — upgrading from v5
 - [API Reference](../api/index.md) — complete method documentation
 - [Tutorials](../tutorials/index.md) — step-by-step examples
-- [Configuration Guide](../guides/configuration.md) — pipeline and environment
+- [Configuration Guide](../guides/configuration.md) — environment variables
+- [Upgrading to v5](../updating/v5-migration.md) — migration from v4.x

@@ -1,129 +1,76 @@
-# Referência da API — Configuração
+# Configuração
 
-Sempre defina o driver a ser usado primeiro e, só então, defina as configurações usando **setConfig()**.
+A v6 não tem configuração ambiente — sem `.env`, sem timezone global, sem schema
+implícito. Um `Cache` é exatamente o que você constrói. Duas coisas são
+configuradas: **como a store é construída** (construtores nomeados) e **como os
+valores são armazenados** (`PipelineConfig`).
 
-Veja também:
-[Selecionar driver (setDriver)](./drivers.md)
+## Construtores nomeados
 
-#### `setConfig()`
-
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig();
-```
+O caminho comum precisa de uma linha:
 
 ```php
-Cacheer::setConfig();
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+
+$cache = Cache::inMemory();                    // ArrayStore
+$cache = Cache::file('/var/cache/app');        // FileStore
+$cache = Cache::database($pdo, 'cacheer');     // DatabaseStore (injete o PDO)
+$cache = Cache::redis($connection);            // RedisStore (injete a conexão)
 ```
 
-> Observação: Métodos de configuração também podem ser chamados estaticamente, por exemplo: `Cacheer::setConfig()->setDatabaseConnection('mysql');`
+Cada construtor persistente aceita um `PipelineConfig` e `Clock` opcionais. Veja
+[Cache e ScopedCache](./funcoes-cache.md#construtores-nomeados) para as assinaturas
+completas, incluindo os decorators `tiered`, `resilient` e `instrumented`.
 
-Configura o banco de dados para armazenar o cache.
-```php
+## `PipelineConfig` — o pipeline de armazenamento
 
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig()->setDatabaseConnection(string $driver)
-```
-
-```php
-Cacheer::setConfig()->setDatabaseConnection(string $driver);
-```
-
-- Parâmetros:
+`Silviooosilva\CacheerPhp\Config\PipelineConfig` é uma descrição imutável de como um
+valor vira bytes: **serialize → (comprime) → (criptografa)**. Cada `with*()` retorna
+uma nova instância.
 
 ```php
-$driver: Driver do banco. Valores possíveis: 'mysql', 'pgsql', 'sqlite'.
+use Silviooosilva\CacheerPhp\Config\PipelineConfig;
+use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
+use Silviooosilva\CacheerPhp\Storage\Compat\V5PayloadReader;
+
+$pipeline = PipelineConfig::default()          // serializer PHP, sem compressão/criptografia
+    ->withJsonSerializer()
+    ->withGzip(level: 6)
+    ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current')) // AES-256-GCM
+    ->withMaxValueBytes(2_000_000)
+    ->withV5Reader(new V5PayloadReader());
+
+$cache = Cache::file('/var/cache/app', $pipeline);
 ```
 
-**Exemplo:**
+| Método | Efeito |
+|---|---|
+| `default()` | Serialização PHP, sem compressão nem criptografia |
+| `withSerializer(Serializer)` / `withJsonSerializer()` | Escolhe o serializer |
+| `withCompressor(Compressor)` / `withGzip(int $level = 6)` | Adiciona compressão |
+| `withEncrypter(Encrypter)` / `withKeyring(Keyring)` | Adiciona criptografia autenticada |
+| `withMaxValueBytes(int)` | Impõe um tamanho serializado máximo na escrita |
+| `withV5Reader(V5PayloadReader)` | Habilita leitura de payloads v5 |
+| `codec()` | Constrói o `EnvelopeCodec` pronto (as stores chamam isto) |
+
+O pipeline é detalhado em [Compressão e criptografia](./compressao-criptografia.md) e
+no [guia de criptografia e compressão](../guias/criptografia-e-compressao.md).
+
+## Injetando suas próprias dependências
+
+Para controle total, construa `Cache` diretamente:
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig()->setDatabaseConnection('mysql');
+$cache = new Cache(
+    store:    $store,
+    clock:    new SystemClock(),
+    executor: $deferredExecutor,   // para stale refresh após a resposta
+    events:   $eventDispatcher,    // observabilidade
+);
 ```
 
-```php
-Cacheer::setConfig()->setDatabaseConnection('mysql');
-```
-
-Também é possível definir o driver no arquivo `.env` através da variável `DB_CONNECTION`, com os mesmos valores.
-
-Timezone
----
-
-```php
-
-<?php
-
-require_once __DIR__ . "/../vendor/autoload.php"; 
-
-$Cacheer = new Cacheer();
-$Cacheer->setConfig()->setTimeZone(string $timezone);
-```
-
-```php
-Cacheer::setConfig()->setTimeZone(string $timezone);
-```
-
-Define o fuso horário para as operações de cache.
-- Parâmetros
-
-```php
-$timezone: Timezone no formato PHP (ex.: 'UTC', 'America/Sao_Paulo').
-```
-
-**Exemplo:**
-
-```php
-$Cacheer->setConfig()->setTimeZone('UTC');
-```
-
-```php
-Cacheer::setConfig()->setTimeZone('UTC');
-```
-
-Consulte os timezones suportados pelo PHP:
-https://www.php.net/manual/pt_BR/timezones.php
-
-Logger
----
-
-```php
-$Cacheer->setConfig()->setLoggerPath(string $path);
-```
-
-```php
-Cacheer::setConfig()->setLoggerPath(string $path);
-```
-Define o caminho onde os logs serão armazenados.
-
-- Parâmetros
-
-```php
-$path: Caminho completo para o arquivo de logs.
-```
-
-**Exemplo:**
-
-```php
-$Cacheer->setConfig()->setLoggerPath('/caminho/para/logs/CacheerPHP.log');
-```
-
-```php
-Cacheer::setConfig()->setLoggerPath('/caminho/para/logs/CacheerPHP.log');
-```
-
+A leitura de variáveis de ambiente pertence à sua aplicação ou a uma ponte
+opcional — não à biblioteca.

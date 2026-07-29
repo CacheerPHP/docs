@@ -1,31 +1,39 @@
-# Example 02 — Custom Expiration (TTL)
+# Custom expiration (TTL)
+
+Every method that stores a value accepts the same TTL forms.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-<?php
-require_once __DIR__ . "/../vendor/autoload.php";
+$cache = Cache::inMemory();
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
-
-$options = [
-    "cacheDir" =>  __DIR__ . "/cache",
-    "expirationTime" => "2 hours"
-];
-
-$Cacheer = new Cacheer($options);
-
-$cacheKey = 'daily_stats';
-$dailyStats = [
-    'visits' => 1500,
-    'signups' => 35,
-    'revenue' => 500.75,
-];
-
-Cacheer::putCache($cacheKey, $dailyStats, 'namespace', '2 hours');
-$Cacheer->putCache($cacheKey, $dailyStats);
-
-$cachedStats = $Cacheer->getCache($cacheKey, 'namespace', '2 hours');
+$cache->set('a', $v, ttl: 3600);                     // int seconds
+$cache->set('b', $v, ttl: '2 hours');                // human string
+$cache->set('c', $v, ttl: new DateInterval('PT30M')); // DateInterval
+$cache->set('d', $v, ttl: Ttl::minutes(15));         // Ttl object
+$cache->set('e', $v, ttl: null);                     // forever
+$cache->set('f', $v, ttl: 'forever');                // forever (string)
 ```
 
-Accepted TTL formats: seconds, minutes, hours.
+Human strings accept `<n> second|minute|hour|day|week` (singular or plural).
 
+## Reading remaining TTL
+
+Use `entry()` to see how long is left:
+
+```php
+use Silviooosilva\CacheerPhp\Support\SystemClock;
+
+$entry = $cache->entry('b');
+echo $entry->remainingTtl(new SystemClock()) ?? 'never'; // seconds, or null when forever
+```
+
+## Notes
+
+- `Ttl::seconds()` requires a value **greater than zero** — there is no "zero means
+  delete" rule; delete explicitly with `delete()`.
+- Forever is stored as "no expiry", not a huge integer, so it doesn't depend on
+  `PHP_INT_MAX`.
+
+See [TTL & Clock](../api/time-builder.md) for the full reference.

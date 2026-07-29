@@ -1,26 +1,30 @@
-# Exemplo 09 — Limpeza Automática com `flushAfter`
+# Removendo entradas expiradas
+
+> A v5 fazia auto-flush em um cronograma como efeito colateral. A v6 torna a limpeza
+> explícita: entradas expiradas são removidas preguiçosamente na leitura, e em massa com
+> `prune()`.
+
+Stores que implementam `PrunableStore` (as quatro nativas) varrem entradas expiradas e
+reportam quantas foram removidas.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Stores\FileStore;
 
-<?php
-require_once  __DIR__  .  "/../vendor/autoload.php";
-use Silviooosilva\\CacheerPhp\\Cacheer;
+$store = new FileStore(__DIR__ . '/cache');
+$cache = new Cache($store);
 
-$options = [
-  "cacheDir" => __DIR__  .  "/cache",
-  "flushAfter" => "1 week"
-];
+// ... o tempo passa, entradas expiram ...
 
-$Cacheer = new Cacheer($options);
-
-$cacheKey = 'user_profile_1234';
-$userProfile = ['id' => 123, 'name' => 'John Doe'];
-
-Cacheer::putCache($cacheKey, $userProfile);
-$Cacheer->putCache($cacheKey, $userProfile);
-
-$cachedProfile = $Cacheer->getCache($cacheKey);
+$removed = $store->prune();  // número de entradas expiradas apagadas
 ```
 
-Intervalos aceitos para `flushAfter`: seconds, minutes, hours, days, weeks, months, years.
+Rode pela CLU num cron em vez de no caminho da requisição:
 
+```sh
+vendor/bin/cacheer prune --dry-run   # reporta o que seria removido
+vendor/bin/cacheer prune             # de fato remove
+```
+
+O prune só remove entradas **expiradas** e nunca toca em dados fora do keyspace
+configurado. Veja o [guia da CLI](../guias/cli.md).

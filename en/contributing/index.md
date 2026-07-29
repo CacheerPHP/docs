@@ -1,93 +1,76 @@
-# Contributing Guide
+# Contributing
 
-Thanks for your interest in improving CacheerPHP! This guide explains how to get set up locally, follow the conventions used across the project, and submit your contribution smoothly.
+Thanks for helping improve CacheerPHP. This page covers the v6 development
+workflow. For the full policy, see `CONTRIBUTING.md`, `SECURITY.md`, and the
+`ROADMAP.md` in the package repository.
 
-## Prerequisites
-
-- PHP 8.2 or newer
-- Composer 2+
-- A Redis server if you want to exercise Redis-specific features (optional)
-- Node.js/npm if you plan to update the documentation site assets
-
-## Repository Structure
-
-```
-CacheerPHP/
-├── CacheerPHP/            # Core library
-│   ├── src/
-│   ├── tests/
-│   └── ...
-└── docs/                  # Source Markdown (EN and PT)
-```
-
-**Important**: update documentation in the `/docs` workspace. The website is derived from that content.
-
-## Setting Up Locally
+## Setup
 
 ```sh
-# Clone the mono-repo (contains library and docs)
-git clone https://github.com/silviooosilva/CacheerPHP-Org.git
-cd CacheerPHP-Org/CacheerPHP
-
-# Install PHP dependencies
+git clone https://github.com/silviooosilva/CacheerPHP
+cd CacheerPHP
 composer install
-
-# Run the test suite
-composer test
-
-# Optional: run static analysis & coding standards
-composer lint
-composer analyse
 ```
 
-<!-- ## Running the Monitor (Optional)
+PHP 8.3+ is required. The core has no mandatory extensions; install `pdo_sqlite`,
+`openssl`, and `zlib` to run the full local suite, and `predis/predis` for Redis.
+
+## Test suites
+
+Tests use [Pest](https://pestphp.com/) and are split by concern:
 
 ```sh
-cd cacheer-monitor
-composer install
-php bin/cacheer-monitor serve --host=127.0.0.1 --port=9966
+composer test            # service-free unit suite (default)
+composer test:kernel     # v6 kernel (Cache, adapters, CLI, rehearsals)
+composer test:contract   # store conformance (Array, File)
+composer test:storage    # the storage pipeline / envelope
+composer test:concurrency  # lock and counter contention harnesses
+composer test:integration  # Redis / database (needs services)
+composer test:all        # everything
 ```
 
-Use `CACHEER_MONITOR_EVENTS` to control the JSONL file location.
+Data providers must use the attribute form, not the annotation:
 
-## Branching & Commits
+```php
+#[\PHPUnit\Framework\Attributes\DataProvider('cases')]
+```
 
-- Work from a feature branch (`feat/...`, `fix/...`, etc.).
-- Keep commits focused; use present-tense, conventional-style messages (e.g. `feat: add redis cache manager`).
-- Rebase onto the latest `main` (or `master`) before opening your pull request.
+## Static analysis and style
 
-## Testing Checklist
+```sh
+composer analyse   # PHPStan level 5, suppression-free
+composer lint      # php-cs-fixer (dry-run)
+composer fix       # php-cs-fixer (apply)
+```
 
-- `composer test` — PHPUnit suite
-- `composer lint` — Coding standards (PHP-CS-Fixer or similar)
-- `composer analyse` — Static analysis (Psalm/Larastan, depending on config)
-- Any relevant monitor scripts (`php Tests/stress_io.php`) if your changes touch aggregator/reporting logic -->
+## Deterministic time
 
-## Updating Documentation
+Never call `time()` or `sleep()` in tests or store code. Time flows through an
+injected `Clock`; tests advance a `FakeClock`. This keeps the suite fast and
+expiry/stale behavior exact.
 
-- English content lives under `docs/en/...`
-- Portuguese translations go in `docs/pt/...`
-- If only one language is available, link to the other as a fallback.
-- When a new page is added, update the relevant `index.md` so it becomes discoverable.
+## Adding a store
 
-## Submitting a Pull Request
+Implement the `Store` contract, add only the capabilities you can guarantee, and
+prove it by extending `Tests\Support\StoreConformance`. See the
+[Custom stores guide](../guides/custom-stores.md). A store must never scan or clear
+data outside its configured keyspace.
 
-1. Push your feature branch to your fork.
-2. Open a PR against `silviooosilva/CacheerPHP` (or the relevant repo).
-3. Fill out the template: describe the change, testing performed, screenshots (if UI-related).
-4. Be responsive to review feedback; squash or rebase if asked.
+## Quality gates for a pull request
 
-## Coding Guidelines
+- Maps to a roadmap work item (and an accepted RFC for substantial changes).
+- Public behavior has unit or contract tests; driver-specific behavior has
+  integration tests; concurrency claims have contention tests.
+- New configuration is typed and documented; new events carry metadata only
+  (never values).
+- No hidden filesystem, environment, timezone, schema, or network side effects.
+- `composer analyse` and `composer lint` pass.
+- Relevant examples and migration notes are updated.
+- Performance-sensitive changes include before/after benchmark evidence
+  (`composer benchmark:baseline`).
 
-- Follow PSR-12 coding style unless the file already uses an alternative style.
-- Type declarations are encouraged (`declare(strict_types=1);`, scalar/type hints).
-- Avoid introducing new dependencies unless necessary; discuss first in an issue.
-<!-- - For monitor frontend changes, keep Tailwind utility classes consistent and avoid inline styles when possible. -->
+## Reporting
 
-## Reporting Issues
-
-- Use GitHub Issues.
-- Provide a clear title, environment details, reproduction steps, expected vs actual behaviour.
-<!-- - Attach logs, stack traces, or JSONL samples if the bug affects the monitor. -->
-
-Thank you for helping make CacheerPHP better!
+- **Bugs / features:** use the issue templates in the repository.
+- **Security:** do not open a public issue — follow `SECURITY.md`.
+- **Substantial changes:** open an RFC first so the design is agreed before code.

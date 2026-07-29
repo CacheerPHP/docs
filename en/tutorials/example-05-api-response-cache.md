@@ -1,30 +1,23 @@
-# Example 05 — API Response Cache
+# Caching an API response
+
+`remember()` returns the cached value, or computes it once on a miss and stores it.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-<?php
-require_once __DIR__ . "/../vendor/autoload.php";
+$cache = Cache::file(__DIR__ . '/cache');
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
-
-$options = [
-    "cacheDir" =>  __DIR__ . "/cache",
-];
-
-$Cacheer = new Cacheer($options);
-
-$apiUrl = 'https://jsonplaceholder.typicode.com/posts';
-$cacheKey = 'api_response_' . md5($apiUrl);
-
-$cachedResponse = $Cacheer->getCache($cacheKey);
-
-if ($Cacheer->has($cacheKey)) {
-    $response = $cachedResponse;
-} else {
-    $response = file_get_contents($apiUrl);
-    $Cacheer->putCache($cacheKey, $response);
-}
-
-$data = json_decode($response, true);
+$weather = $cache->remember('weather:lisbon', ttl: '15 minutes', callback: function () {
+    $json = file_get_contents('https://api.example.com/weather?city=lisbon');
+    return json_decode($json, true);
+});
 ```
 
+- On a hit, the HTTP call never happens.
+- On a concurrent miss, the callback runs **once** across workers (single-flight),
+  not once per request — no stampede. See
+  [Stampede protection](./example-18-stampede-and-swr.md).
+- Cache forever by passing `ttl: null`.
+
+For hot endpoints where you never want a user to wait for a refresh, use
+[`flexible()`](./example-18-stampede-and-swr.md) instead.

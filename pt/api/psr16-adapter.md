@@ -1,121 +1,70 @@
-# Adaptador PSR-16 SimpleCache
+# Adaptadores PSR-16 e PSR-6
 
-*Novo na v5.0.0*
+O CacheerPHP 6 traz adaptadores para os dois PSRs de cache sobre o mesmo núcleo
+`Cache`, para você entregar um cache padronizado a qualquer biblioteca
+interoperável.
 
-O `Psr16CacheAdapter` envolve qualquer instância `Cacheer` e expõe a interface padrão `\Psr\SimpleCache\CacheInterface`. Isto permite usar o CacheerPHP em qualquer lugar onde se espera um cache PSR-16 — containers de serviços de frameworks, bibliotecas de terceiros ou as suas próprias dependências tipadas.
+## PSR-16 — `Psr16Cache`
 
-## Instalação
-
-O adaptador está incluído no pacote principal. A dependência `psr/simple-cache` ^3.0 é instalada automaticamente.
-
-```sh
-composer require silviooosilva/cacheer-php
-```
-
-## Uso Básico
+`Silviooosilva\CacheerPhp\Psr\Psr16Cache` implementa
+`Psr\SimpleCache\CacheInterface`.
 
 ```php
-<?php
-use Silviooosilva\CacheerPhp\Cacheer;
-use Silviooosilva\CacheerPhp\Psr\Psr16CacheAdapter;
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Psr\Psr16Cache;
 
-$cacheer = new Cacheer(['cacheDir' => __DIR__ . '/cache']);
-$cache   = new Psr16CacheAdapter($cacheer);
+$psr16 = new Psr16Cache(Cache::file('/var/cache/app'));
 
-// set / get / has / delete
-$cache->set('user:1', ['name' => 'Alice'], 3600);
-$cache->get('user:1');               // ['name' => 'Alice']
-$cache->get('missing', 'default');   // 'default'
-$cache->has('user:1');               // true
-$cache->delete('user:1');
+$psr16->set('token', 'abc123', 1800);        // ttl: int segundos, DateInterval ou null
+$psr16->get('token');                         // 'abc123'
+$psr16->get('missing', 'default');            // 'default'
+$psr16->has('token');                         // true
+$psr16->delete('token');
+
+$psr16->setMultiple(['a' => 1, 'b' => 2], 3600);
+$psr16->getMultiple(['a', 'b', 'c'], 'default');
+$psr16->deleteMultiple(['a', 'b']);
+$psr16->clear();
 ```
 
-## Construtor
+Detalhes de spec honrados:
+
+- Caracteres reservados na chave (`{}()/\@:`) lançam `CacheInvalidArgumentException`
+  (que implementa a `InvalidArgumentException` do PSR-16 *e* do PSR-6).
+- TTL `null` significa para sempre; `<= 0` apaga a chave (como a spec exige).
+- Um `null` cacheado é retornado como hit, distinto do padrão num miss.
+
+## PSR-6 — `Psr6Pool`
+
+`Silviooosilva\CacheerPhp\Psr\Psr6Pool` implementa
+`Psr\Cache\CacheItemPoolInterface`; os itens são `Psr6Item`. O pool recebe um
+`Cache` e um `Clock`.
 
 ```php
-new Psr16CacheAdapter(Cacheer $cache, string $namespace = '')
-```
+use Silviooosilva\CacheerPhp\Psr\Psr6Pool;
+use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-| Parâmetro | Descrição |
-|-----------|-----------|
-| `$cache` | A instância Cacheer subjacente a que o adaptador delega |
-| `$namespace` | Namespace opcional aplicado a todas as chaves (isola instâncias diferentes do adaptador) |
+$pool = new Psr6Pool(Cache::file('/var/cache/app'), new SystemClock());
 
-## Métodos
-
-### Operações de Item Único
-
-| Método | Assinatura | Descrição |
-|--------|-----------|-----------|
-| `get` | `get(string $key, mixed $default = null): mixed` | Obtém um valor; devolve `$default` em caso de miss |
-| `set` | `set(string $key, mixed $value, int\|DateInterval\|null $ttl = null): bool` | Guarda um valor |
-| `delete` | `delete(string $key): bool` | Remove uma chave |
-| `has` | `has(string $key): bool` | Verifica a existência |
-| `clear` | `clear(): bool` | Limpa todo o cache |
-
-### Operações em Lote
-
-| Método | Assinatura | Descrição |
-|--------|-----------|-----------|
-| `getMultiple` | `getMultiple(iterable $keys, mixed $default = null): iterable` | Obtém várias chaves de uma vez |
-| `setMultiple` | `setMultiple(iterable $values, int\|DateInterval\|null $ttl = null): bool` | Guarda vários pares chave/valor |
-| `deleteMultiple` | `deleteMultiple(iterable $keys): bool` | Remove várias chaves |
-
-## Comportamento do TTL
-
-| Entrada | Efeito |
-|---------|--------|
-| `null` | Guarda para sempre (`PHP_INT_MAX` segundos) |
-| `int` positivo | Segundos até expirar |
-| `0` ou `int` negativo | Expira imediatamente (a chave é apagada) |
-| `\DateInterval` | Convertido automaticamente para segundos |
-
-```php
-$cache->set('forever', 'data', null);                      // sem expiração
-$cache->set('timed', 'data', 1800);                        // 30 minutos
-$cache->set('interval', 'data', new DateInterval('PT1H')); // 1 hora
-$cache->set('ephemeral', 'data', 0);                       // apagado imediatamente
-```
-
-## Validação de Chaves
-
-A PSR-16 define caracteres reservados que **não** podem aparecer nas chaves. O adaptador lança `CacheInvalidArgumentException` (que implementa `\Psr\SimpleCache\InvalidArgumentException`) para:
-
-- Strings vazias
-- Chaves que contenham qualquer um de: `{ } ( ) / \ @ :`
-
-```php
-use Silviooosilva\CacheerPhp\Exceptions\CacheInvalidArgumentException;
-
-try {
-    $cache->get('bad:key');
-} catch (CacheInvalidArgumentException $e) {
-    // "Cache key "bad:key" contains reserved PSR-16 characters"
+$item = $pool->getItem('user:42');
+if (! $item->isHit()) {
+    $item->set($user)->expiresAfter(600); // segundos ou um DateInterval
+    $pool->save($item);
 }
+$user = $pool->getItem('user:42')->get();
+
+// Saves deferidos são descarregados no commit().
+$pool->saveDeferred($pool->getItem('a')->set(1));
+$pool->commit();
 ```
 
-## Isolamento por Namespace
+`Psr6Item::expiresAfter()` é agnóstico ao clock (relativo), enquanto
+`expiresAt(DateTimeInterface)` fixa uma expiração absoluta; o pool resolve ambos
+contra o clock injetado, então a expiração PSR-6 é determinística sob um `FakeClock`.
 
-Crie vários adaptadores com namespaces diferentes para isolar módulos que partilham a mesma instância Cacheer:
+## Qual usar?
 
-```php
-$users    = new Psr16CacheAdapter($cacheer, 'users');
-$sessions = new Psr16CacheAdapter($cacheer, 'sessions');
-
-$users->set('config', 'user-value');
-$sessions->set('config', 'session-value');
-
-$users->get('config');    // 'user-value'
-$sessions->get('config'); // 'session-value'
-```
-
-## Exemplo de Integração com Framework
-
-Registe o adaptador num container ao estilo Laravel:
-
-```php
-$container->singleton(\Psr\SimpleCache\CacheInterface::class, function () {
-    $cacheer = new Cacheer(['cacheDir' => storage_path('cache')]);
-    return new Psr16CacheAdapter($cacheer);
-});
-```
+- Use **PSR-16** para cache chave/valor direto e o maior suporte de bibliotecas.
+- Use **PSR-6** quando uma biblioteca exigir o modelo pool/item ou commits deferidos.
+- Use a API nativa [`Cache`](./funcoes-cache.md) para escopos, `remember()`,
+  `flexible()`, políticas, camadas e resiliência — recursos que os PSRs não cobrem.

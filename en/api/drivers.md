@@ -1,109 +1,107 @@
-# API Reference — Drivers
+# Stores & capabilities
 
-`setDriver()` returns a `CacheDriver` instance that lets you select the cache backend. CacheerPHP ships with four drivers.
+A **store** is where entries live. v6 keeps the required contract tiny and moves
+everything optional into **capability interfaces** a store declares by
+implementing them. The kernel checks for a capability and throws
+`UnsupportedCapabilityException` if it is missing — it never fakes a guarantee.
 
-> **Note:** All methods can be called statically: `Cacheer::setDriver()->useFileDriver();`
-
----
-
-## Available Drivers
-
-| Method | Backend | Best for | Requires |
-|--------|---------|----------|----------|
-| `useFileDriver()` | Local filesystem | General-purpose caching | `cacheDir` option |
-| `useDatabaseDriver()` | MySQL / PostgreSQL / SQLite | Shared cache across servers | PDO + `.env` config |
-| `useRedisDriver()` | Redis server | High-throughput / distributed | `predis/predis` + Redis |
-| `useArrayDriver()` | In-memory PHP array | Testing / short-lived scripts | Nothing |
-| `useDefaultDriver()` | File (auto-creates dir) | Zero-config quickstart | — |
-
----
-
-## Usage
-
-### Instance
+## The `Store` contract
 
 ```php
-$cache = new Cacheer();
-$cache->setDriver()->useFileDriver();
+namespace Silviooosilva\CacheerPhp\Contracts;
+
+interface Store
+{
+    public function get(Key $key): CacheEntry;             // hit or miss
+    public function set(Key $key, mixed $value, Ttl $ttl): void;
+    public function delete(Key $key): bool;               // true if removed
+    public function clear(): void;                        // this store's keyspace only
+}
 ```
 
-### Static
+## Capability interfaces
+
+| Interface | Methods | Adds |
+|---|---|---|
+| `BatchStore` | `getMany`, `setMany`, `deleteMany` | Native multi-key operations |
+| `TouchStore` | `touch(Key, Ttl): bool` | Extend an entry's TTL in place |
+| `PrunableStore` | `prune(): int` | Remove expired entries; returns the count |
+| `InspectableStore` | `entries(?Scope): iterable` | Iterate live entries / metadata |
+| `FlushableScopeStore` | `clearScope(Scope): void` | Clear a single scope |
+| `TaggableStore` | `tag(Key, ...string)`, `clearTag(string): int` | Group + invalidate by tag |
+| `AtomicStore` | `increment(Key, int $amount = 1, ?int $initial = null, ?Ttl = null): int`, `compareAndSwap(Key, mixed $expected, mixed $value, ?Ttl = null): bool` | Atomic counters and CAS |
+| `LockingStore` | `lock(string $name, Ttl): Lock` | Named locks — see [Locks](./locks.md) |
+
+## Built-in stores
+
+All four built-in stores implement **every** capability above. What differs is the
+*guarantee* behind a capability, especially atomicity and locking.
+
+| | `ArrayStore` | `FileStore` | `DatabaseStore` | `RedisStore` |
+|---|:--:|:--:|:--:|:--:|
+| Persistence | In-process | Disk | PDO (SQLite/MySQL/PgSQL) | Redis server |
+| Dependencies | none | none | `ext-pdo` | `predis` or `ext-redis` |
+| Atomic scope | one request | one host (file lock) | row lock / txn | server-side |
+| Best for | tests, short CLI | single host | shared state | high throughput |
 
 ```php
-Cacheer::setDriver()->useArrayDriver();
+use Silviooosilva\CacheerPhp\Stores\{ArrayStore, FileStore, DatabaseStore, RedisStore};
+
+$store = new ArrayStore($clock);
+$store = new FileStore('/var/cache/app', $codec, clock: $clock);
+$store = new DatabaseStore($pdo, 'cacheer_store', $codec, clock: $clock);
+$store = new RedisStore($connection, 'cacheer', $codec, clock: $clock);
 ```
 
-### With OptionBuilder
+The `$codec` comes from a [`PipelineConfig`](./config.md); omit it for the safe
+default (PHP serialization, no compression or encryption). Prefer the
+[named constructors](./cache-functions.md#named-constructors) unless you need the
+raw store.
+
+### Redis connections
+
+`RedisStore` takes an injected `RedisConnection` — it never creates a global
+client:
 
 ```php
-use Silviooosilva\CacheerPhp\Config\Option\Builder\OptionBuilder;
+use Silviooosilva\CacheerPhp\Stores\Support\{PredisConnection, PhpRedisConnection};
 
-$options = OptionBuilder::forRedis()
-    ->setNamespace('app:')
-    ->expirationTime('2 hours')
-    ->build();
-
-$cache = new Cacheer($options);
-$cache->setDriver()->useRedisDriver();
+$connection = new PredisConnection($predisClient);    // predis/predis
+$connection = new PhpRedisConnection($redis);         // ext-redis \Redis
 ```
 
----
+### Database schema
 
-## Inspecting the Active Driver *(v5.0.0)*
+`DatabaseStore` never creates its schema implicitly. Migrate once, explicitly:
 
 ```php
-// Get the current driver instance
-$driver = $cache->getCacheStore();
-echo get_class($driver);
-// Silviooosilva\CacheerPhp\CacheStore\ArrayCacheStore
+use Silviooosilva\CacheerPhp\Stores\Support\DatabaseStoreSchema;
 
-// Switch the driver at runtime
-$cache->setCacheStore(new ArrayCacheStore($logPath));
-
-// Check via stats()
-$info = $cache->stats();
-echo $info['driver'];  // full class name of the active driver
+DatabaseStoreSchema::migrate($pdo, 'cacheer_store');  // idempotent
+DatabaseStoreSchema::drop($pdo, 'cacheer_store');     // rollback
 ```
 
----
+Or preview the DDL with `cacheer migrate --dry-run` (see [CLI](../guides/cli.md)).
 
-## Driver Details
+## Decorators
 
-### File Driver
+Decorators wrap any store and forward every capability the wrapped store(s)
+provide, so composition never loses a feature.
 
-Stores each cache item as a serialized file on disk. In v5.0.0, each file contains a JSON envelope with `{data, expires_at, ttl}` for per-item TTL support.
+- **[`TieredStore`](../guides/tiered-caching.md)** — a fast local L1 in front of a
+  shared L2, with promotion and generation-based coherence.
+- **[`ResilientStore`](../guides/resilient-store.md)** — primary with a fallback,
+  guarded by a circuit breaker.
+- **[`InstrumentedStore`](../guides/observability.md)** — times every operation
+  and emits typed events; values are never captured unless you opt in.
 
 ```php
-$cache = new Cacheer(['cacheDir' => __DIR__ . '/cache']);
-// File driver is the default
+$cache = Cache::tiered(new ArrayStore($clock), $redisStore);
+$cache = Cache::resilient($primary, $fallback);
+$cache = Cache::instrumented($store, $events);
 ```
 
-### Database Driver
+## Writing your own
 
-Uses a PDO connection to store cache items in a database table. Configure connection details via `.env` or `setConfig()->setDatabaseConnection()`.
-
-```php
-$cache = new Cacheer();
-$cache->setConfig()->setDatabaseConnection('sqlite');
-$cache->setDriver()->useDatabaseDriver();
-```
-
-### Redis Driver
-
-Connects to a Redis server via `predis/predis`. Configure host, port, and password in `.env`.
-
-```php
-$cache = new Cacheer();
-$cache->setDriver()->useRedisDriver();
-```
-
-In v5.0.0, storing with `PHP_INT_MAX` TTL (forever) uses `SET` instead of `SETEX` to avoid Redis rejecting extremely large expiry values.
-
-### Array Driver
-
-Stores everything in a PHP array — data is lost when the process ends. Ideal for unit tests and CLI scripts.
-
-```php
-$cache = new Cacheer();
-$cache->setDriver()->useArrayDriver();
-```
+Implement `Store`, add the capabilities you can honor, and prove it with the
+shared conformance suite. See [Custom stores](../guides/custom-stores.md).

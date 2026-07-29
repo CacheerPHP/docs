@@ -1,31 +1,38 @@
-# Exemplo 02 — Tempo de Expiração Personalizado (TTL)
+# Expiração personalizada (TTL)
+
+Todo método que guarda um valor aceita as mesmas formas de TTL.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-<?php
-require_once __DIR__ . "/../vendor/autoload.php";
+$cache = Cache::inMemory();
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
-
-$options = [
-    "cacheDir" =>  __DIR__ . "/cache",
-    "expirationTime" => "2 hours"
-];
-
-$Cacheer = new Cacheer($options);
-
-$cacheKey = 'daily_stats';
-$dailyStats = [
-    'visits' => 1500,
-    'signups' => 35,
-    'revenue' => 500.75,
-];
-
-Cacheer::putCache($cacheKey, $dailyStats, 'namespace', '2 hours');
-$Cacheer->putCache($cacheKey, $dailyStats);
-
-$cachedStats = $Cacheer->getCache($cacheKey, 'namespace', '2 hours');
+$cache->set('a', $v, ttl: 3600);                     // int segundos
+$cache->set('b', $v, ttl: '2 hours');                // string legível
+$cache->set('c', $v, ttl: new DateInterval('PT30M')); // DateInterval
+$cache->set('d', $v, ttl: Ttl::minutes(15));         // objeto Ttl
+$cache->set('e', $v, ttl: null);                     // para sempre
+$cache->set('f', $v, ttl: 'forever');                // para sempre (string)
 ```
 
-Formatos aceitos: seconds, minutes, hours.
+Strings legíveis aceitam `<n> second|minute|hour|day|week` (singular ou plural).
 
+## Lendo o TTL restante
+
+Use `entry()` para ver quanto falta:
+
+```php
+use Silviooosilva\CacheerPhp\Support\SystemClock;
+
+$entry = $cache->entry('b');
+echo $entry->remainingTtl(new SystemClock()) ?? 'nunca'; // segundos, ou null se para sempre
+```
+
+## Notas
+
+- `Ttl::seconds()` exige um valor **maior que zero** — não existe regra de "zero
+  apaga"; apague explicitamente com `delete()`.
+- "Para sempre" é guardado como "sem expiração", não um inteiro gigante.
+
+Veja [TTL e Clock](../api/construtor-de-tempo.md) para a referência completa.

@@ -1,538 +1,211 @@
-# Cache Functions — API Reference
+# Cache & ScopedCache — method reference
 
-This page documents every cache operation available on the `Cacheer` class. All methods can be called on an instance (`$cache->method()`) or statically (`Cacheer::method()`).
+`Silviooosilva\CacheerPhp\Kernel\Cache` is the public entry point. `ScopedCache`
+(returned by `scope()`) exposes the same read/write surface bound to a scope.
+Every key argument accepts a `string` or a [`Key`](./option-builder.md#key).
 
----
+## Named constructors
 
-## Status Methods
-
-After any operation you can inspect the result:
+Build a `Cache` for a store without touching the constructor:
 
 ```php
-$cache->isSuccess();   // bool — whether the last operation succeeded
-$cache->getMessage();  // string — human-readable status message
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+
+Cache::inMemory(?Clock $clock = null): Cache
+Cache::file(string $directory, ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+Cache::database(PDO $pdo, string $table = 'cacheer_store', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+Cache::redis(RedisConnection $connection, string $prefix = 'cacheer', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+
+// Decorators
+Cache::tiered(Store $l1, Store $l2, ?Ttl $l1MaxTtl = null, ?Clock $clock = null, ?DeferredExecutor $executor = null, ?EventDispatcher $events = null): Cache
+Cache::resilient(Store $primary, Store $fallback, ?CircuitBreaker $breaker = null, ?Clock $clock = null, ?DeferredExecutor $executor = null): Cache
+Cache::instrumented(Store $store, EventDispatcher $events, bool $captureValues = false, ?callable $redactor = null, ?Clock $clock = null): Cache
 ```
 
----
-
-## Reading Data
-
-### `getCache()` — Retrieve a single item
+Or construct directly with any store:
 
 ```php
-$cache->getCache(string $cacheKey, string $namespace = '', string|int $ttl = 3600): mixed
+$cache = new Cache($store, ?Clock $clock, ?DeferredExecutor $executor, ?EventDispatcher $events);
 ```
 
-Returns the cached value, or `null` if the key does not exist or has expired. In v5.0.0, falsy values (`0`, `false`, `''`, `[]`) are correctly returned as cache hits — check `isSuccess()` to distinguish a stored falsy value from a miss.
+## Reading
+
+### `get()`
 
 ```php
-$user = $cache->getCache('user:123');
+public function get(string|Key $key, mixed $default = null): mixed
+```
 
-if ($cache->isSuccess()) {
-    // Cache hit — $user may be any value including 0, false, or ''
-} else {
-    // Cache miss
+Returns the cached value, or `$default` on a miss. A stored `null`/`false`/`0`/
+`''` is a hit and is returned as-is — pass a sentinel default, or use `entry()`,
+if you must distinguish a stored `null` from a miss.
+
+```php
+$user = $cache->get('user:42');
+$flag = $cache->get('feature:x', default: false);
+```
+
+### `entry()`
+
+```php
+public function entry(string|Key $key): CacheEntry
+```
+
+Returns the full [`CacheEntry`](./option-builder.md#cacheentry) — hit/miss,
+value, timestamps, and remaining TTL.
+
+```php
+$entry = $cache->entry('user:42');
+if ($entry->isHit()) {
+    $value = $entry->value();
+    $ttl   = $entry->remainingTtl($clock); // seconds, or null if forever
 }
 ```
 
-### `getMany()` — Retrieve multiple items
+### `has()`
 
 ```php
-$cache->getMany(array $cacheKeys, string $namespace = ''): array
+public function has(string|Key $key): bool
 ```
 
-Returns an associative array `[key => value]` for each found key.
+`true` when a live (unexpired) entry exists.
+
+### `many()`
 
 ```php
-$items = $cache->getMany(['key1', 'key2', 'key3']);
-// ['key1' => 'val1', 'key2' => 'val2', 'key3' => 'val3']
+public function many(iterable $keys, mixed $default = null): array
 ```
 
-### `getAll()` — Retrieve all items in a namespace
+Returns `[key => value]`, using `$default` for misses. Uses the store's native
+batch read when it implements [`BatchStore`](./drivers.md#batchstore).
 
 ```php
-$cache->getAll(string $namespace = ''): array
+$values = $cache->many(['user:1', 'user:2', 'user:3'], default: null);
 ```
 
-Returns every cached item within the given namespace.
+## Writing
 
-### `has()` — Check key existence
+### `set()`
 
 ```php
-$cache->has(string $cacheKey, string $namespace = ''): bool
+public function set(string|Key $key, mixed $value, Ttl|DateInterval|int|string|null $ttl = null): void
 ```
 
-Returns `true` if the key exists and is not expired.
+Stores a value. The TTL accepts a [`Ttl`](./time-builder.md), an `int` (seconds),
+a human string (`'10 minutes'`), a `DateInterval`, or `null` (forever). See
+[TTL & Clock](./time-builder.md).
 
 ```php
-if ($cache->has('session:abc')) {
-    // Key exists
-}
+$cache->set('user:42', $user, ttl: '10 minutes');
+$cache->set('config', $config, ttl: null); // forever
 ```
 
----
-
-## Writing Data
-
-### `putCache()` — Store a value
+### `setMany()`
 
 ```php
-$cache->putCache(
-    string $cacheKey,
-    mixed  $cacheData,
-    string $namespace = '',
-    int|string|\DateInterval|null $ttl = 3600
-): bool
+public function setMany(iterable $values, Ttl|DateInterval|int|string|null $ttl = null): void
 ```
 
-Stores a value under the given key. Returns `true` on success. The `$ttl` parameter accepts:
+Stores `['key' => value, ...]` under one TTL. Uses a native batch/transaction
+when the store implements `BatchStore`. Keys must be strings.
 
-| Type | Meaning | Example |
-|------|---------|---------|
-| `int` | Seconds | `3600` |
-| `string` | Human-readable | `'2 hours'` |
-| `\DateInterval` | PHP interval *(new in v5)* | `new \DateInterval('PT30M')` |
-| `null` | Store forever *(new in v5)* | `null` |
+### `delete()` / `deleteMany()`
 
 ```php
-$cache->putCache('key', $data, '', 3600);
-$cache->putCache('key', $data, '', '2 hours');
-$cache->putCache('key', $data, '', new \DateInterval('PT30M'));
-$cache->putCache('key', $data, '', null);  // forever
+public function delete(string|Key $key): bool
+public function deleteMany(iterable $keys): bool
 ```
 
-### `putMany()` — Store multiple items
+`delete()` returns `true` when something was removed. `deleteMany()` returns
+`true` only if every key was removed.
+
+### `clear()`
 
 ```php
-$cache->putMany(array $items, string $namespace = '', int $batchSize = 100): bool
+public function clear(): void
 ```
 
-Stores an array of items in batch. Each element must have `cacheKey` and `cacheData`.
+Removes everything in this cache's keyspace. On a `ScopedCache`, `clear()` removes
+only that scope (requires [`FlushableScopeStore`](./drivers.md#flushablescopestore)).
 
-### `appendCache()` — Append to existing value
+## Compute-and-store
+
+### `remember()`
 
 ```php
-$cache->appendCache(string $cacheKey, mixed $cacheData, string $namespace = ''): bool
+public function remember(string|Key $key, Ttl|DateInterval|int|string|null $ttl, callable $callback): mixed
 ```
 
-Replaces (appends) data to an existing cache entry.
-
-### `forever()` — Store without expiration
+Returns the cached value; on a miss, runs `$callback`, stores the result under
+`$ttl`, and returns it. When the store implements
+[`LockingStore`](./locks.md), `remember()` is **single-flight**: one caller
+computes while the rest wait and read the result (no dogpile). Without locking it
+degrades to a plain compute-and-store.
 
 ```php
-$cache->forever(string $cacheKey, mixed $cacheData): bool
+$user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 ```
 
-Stores a value with `PHP_INT_MAX` as the TTL — effectively no expiration.
-
-### `add()` — Conditional store (only if key is absent)
+### `flexible()` — stale-while-revalidate
 
 ```php
-$cache->add(
-    string $cacheKey,
-    mixed  $cacheData,
-    string $namespace = '',
-    int|string|\DateInterval|null $ttl = 3600
-): bool
+public function flexible(string|Key $key, int $fresh, int $stale, callable $callback): mixed
 ```
 
-Stores the value **only if the key does not already exist**.
-
-| Return | Meaning |
-|--------|---------|
-| `true` | Key was new — value was stored |
-| `false` | Key already existed — nothing was written |
-
-> **v5 breaking change:** In v4.x the return values were inverted. v5.0.0 matches the standard convention used by memcached, Laravel, and other mainstream libraries.
+Serves a value directly while it is *fresh* (within `$fresh` seconds of creation).
+Between `$fresh` and `$stale` it serves the **stale** value immediately and
+refreshes it once, in the background, via the deferred executor. Past `$stale`
+it recomputes synchronously. Requires `0 < fresh < stale`, and composes with a
+hard TTL of `$stale`. See [Stale-while-revalidate](../guides/stale-while-revalidate.md).
 
 ```php
-// First-writer-wins lock pattern
-if ($cache->add('lock:job:42', getmypid(), ttl: 60)) {
-    // Lock acquired — run the job
-    $cache->clearCache('lock:job:42');
-} else {
-    // Another process holds the lock
-}
+$feed = $cache->flexible('feed', fresh: 30, stale: 300, callback: fn () => build_feed());
 ```
 
----
+## Scopes and policies
 
-## Modifying Data
-
-### `renewCache()` — Extend TTL without changing data
+### `scope()`
 
 ```php
-$cache->renewCache(
-    string $cacheKey,
-    int|string|\DateInterval|null $ttl = 3600,
-    string $namespace = ''
-): bool
+public function scope(string|Scope $scope): ScopedCache
 ```
 
-### `increment()` / `decrement()` — Numeric operations
+Returns a [`ScopedCache`](../guides/scopes.md) — an isolated keyspace with the
+same API. Scopes nest: `$cache->scope('a')->scope('b')`.
 
 ```php
-$cache->increment(string $cacheKey, int $amount = 1, string $namespace = ''): bool
-$cache->decrement(string $cacheKey, int $amount = 1, string $namespace = ''): bool
+$reports = $cache->scope('reports');
+$reports->set('daily', $rows);
+$reports->clear(); // clears only the "reports" scope
 ```
 
-Increments or decrements a numeric cached value. Returns `true` on success. In v5.0.0, these correctly handle stored value `0` (which was treated as a miss in v4).
+### `withPolicy()`
 
 ```php
-$cache->putCache('counter', 0);
-$cache->increment('counter', 5);   // counter is now 5
-$cache->decrement('counter', 2);   // counter is now 3
+public function withPolicy(CachePolicy $policy): PolicyCache
 ```
 
-> **Atomic since v5.2.0.** These are read-modify-write operations, which lose
-> updates under concurrency. On any lockable driver (File, Database, Redis) each
-> update is now serialised on a per-key [lock](./locks.md), so concurrent
-> increments are applied exactly once. The signatures and return values are
-> unchanged. See also the optional `$default` / `$ttl` parameters under
-> [v5.1.0 Additions](#increment--decrement--optional-default--ttl).
-
----
-
-## Computed Values
-
-### `remember()` — Get-or-compute with TTL
+Wraps the cache with a [`CachePolicy`](../guides/policies.md) (default TTL, jitter,
+negative caching, serve-stale-on-error). Reads pass through; writes and
+`remember()` honor the policy.
 
 ```php
-$cache->remember(
-    string $cacheKey,
-    int|string|\DateInterval $ttl,
-    \Closure $callback
-): mixed
+$cache = $cache->withPolicy(
+    CachePolicy::defaults()->withTtl('10 minutes')->withJitter(0.10)->withServeStaleOnError('2 minutes'),
+);
 ```
 
-Returns the cached value if it exists; otherwise executes `$callback`, stores the result, and returns it. In v5.0.0, the callback is **not** re-invoked when the cached value is falsy (`0`, `false`, etc.).
+## Capabilities beyond the kernel
+
+Atomic counters, tags, touch, prune, and inspection live on the **store**
+capability interfaces, not on `Cache`. Reach them through the store, or through
+the [`LegacyCacheer`](../updating/index.md) bridge:
 
 ```php
-$stats = $cache->remember('dashboard:stats', new \DateInterval('PT5M'), function () {
-    return computeExpensiveStats();
-});
+$store->increment(Key::named('visits'));        // AtomicStore
+$store->tag(Key::named('p1'), 'products');       // TaggableStore
+$removed = $store->clearTag('products');
+$store->prune();                                 // PrunableStore
 ```
 
-> **Stampede-safe since v5.2.0.** On a miss the recompute is guarded by a per-key
-> single-flight [lock](./locks.md), so a burst of concurrent misses runs the
-> callback **once** (no cache stampede / dogpile) on any lockable driver. Waiters
-> re-check the cache and return the freshly-stored value. If the driver can't
-> lock or the lock isn't obtained in time, it falls back to an unguarded
-> compute — never worse than before. For values you'd rather serve *stale* than
-> block on, see [`flexible()`](#flexible--stale-while-revalidate).
-
-### `rememberForever()` — Get-or-compute without expiration
-
-```php
-$cache->rememberForever(string $cacheKey, \Closure $callback): mixed
-```
-
-Same as `remember()`, but stored with no expiration.
-
-### `flexible()` — Stale-while-revalidate
-
-*New in v5.2.0*
-
-```php
-$cache->flexible(
-    string $cacheKey,
-    int $fresh,
-    int $stale,
-    \Closure $callback
-): mixed
-```
-
-Get-or-compute with two horizons, so reads rarely block on recomputation:
-
-- **Fresh** (`< $fresh` seconds old) — the value is served directly.
-- **Stale** (`$fresh`..`$stale` seconds old) — the value is served *immediately*, while a single worker recomputes it in the background (single-flight).
-- **Expired** (`> $stale` seconds old) — the value is recomputed under a single-flight lock.
-
-Both the stale refresh and the cold recompute are stampede-protected — the callback never runs more than once at a time for a given key.
-
-```php
-// Serve a cached homepage; refresh it in the background once it is older than
-// 60s, and keep serving the cached copy for up to 10 minutes if needed.
-$html = $cache->flexible('home', fresh: 60, stale: 600, function () {
-    return renderHomepage();
-});
-```
-
-> The request that wins the refresh lock recomputes inline (and returns the fresh value); all other requests in the stale window return the cached value immediately. `$stale` must be greater than `$fresh`.
-
-### `getAndForget()` — Retrieve and remove
-
-```php
-$cache->getAndForget(string $cacheKey, string $namespace = ''): mixed
-```
-
-Returns the cached value and immediately deletes the key. Returns `null` if the key does not exist.
-
----
-
-## Removing Data
-
-### `clearCache()` — Remove a single key
-
-```php
-$cache->clearCache(string $cacheKey, string $namespace = ''): bool
-```
-
-### `flushCache()` — Remove everything
-
-```php
-$cache->flushCache(): bool
-```
-
-Deletes all cached items from the current driver.
-
----
-
-## Tagging
-
-### `tag()` — Associate keys with a tag
-
-```php
-$cache->tag(string $tag, string ...$keys): bool
-```
-
-Groups one or more keys under a tag name. Keys can be plain (`'user:1'`) or namespaced (`'nsA:profile'`).
-
-### `flushTag()` — Invalidate by tag
-
-```php
-$cache->flushTag(string $tag): bool
-```
-
-Removes all keys associated with the given tag.
-
-```php
-$cache->putCache('user:1', ['name' => 'Alice']);
-$cache->putCache('user:2', ['name' => 'Bob']);
-$cache->tag('users', 'user:1', 'user:2');
-
-$cache->flushTag('users');  // removes user:1 and user:2
-```
-
-**Storage by driver:**
-
-| Driver | Where the tag index lives |
-|--------|--------------------------|
-| File | `cacheDir/_tags/{tag}.json` |
-| Redis | Redis Set `tag:{tag}` |
-| Database | Reserved namespace `__tags__`, key `tag:{tag}` |
-| Array | In memory; reset on `flushCache()` |
-
----
-
-## Compression & Encryption
-
-### `useCompression()` — Toggle gzip compression
-
-```php
-$cache->useCompression(bool $enable = true): self
-```
-
-When enabled, data is serialized and compressed with `gzcompress` before storage.
-
-### `useEncryption()` — Enable AES-256-CBC encryption
-
-```php
-$cache->useEncryption(string $key): self
-```
-
-Encrypts data with AES-256-CBC using a random IV per write (v5.0.0). The IV is prepended to the ciphertext and stored as a base64-encoded blob.
-
-Both features can be combined:
-
-```php
-$cache->useCompression()->useEncryption('my-secret-key');
-```
-
-See [Compression & Encryption](./compression-encryption.md) for details.
-
----
-
-## Diagnostics (v5.0.0)
-
-### `stats()` — Inspect the active instance
-
-```php
-$cache->stats(): array
-```
-
-Returns:
-
-```php
-[
-    'driver'      => 'Silviooosilva\CacheerPhp\CacheStore\ArrayCacheStore',
-    'compression' => false,
-    'encryption'  => true,
-]
-```
-
-### `getCacheStore()` — Access the active driver
-
-```php
-$cache->getCacheStore(): CacheerInterface
-```
-
-### `resetInstance()` — Clear the static singleton
-
-```php
-Cacheer::resetInstance(): void
-```
-
-Clears the shared static instance so the next static call creates a fresh one. Useful for test isolation.
-
-### `setInstance()` — Inject a custom singleton
-
-```php
-Cacheer::setInstance(Cacheer $instance): void
-```
-
-Replaces the static singleton so all subsequent `Cacheer::*()` calls delegate to the given instance.
-
----
-
-## PSR-16 Adapter
-
-CacheerPHP ships with a PSR-16 adapter. See [PSR-16 Adapter](./psr16-adapter.md) for the full reference.
-
-```php
-use Silviooosilva\CacheerPhp\Psr\Psr16CacheAdapter;
-
-$psr = new Psr16CacheAdapter($cache, 'optional-namespace');
-$psr->set('key', 'value', 3600);
-$psr->get('key');
-```
-
----
-
-## v5.1.0 Additions (backwards-compatible)
-
-> All v5.1.0 additions are **opt-in** and **non-breaking**. Every method, signature, and return type from v5.0.x continues to work exactly as before.
-
-### Convenience aliases — `forget()`, `pull()`, `missing()`
-
-```php
-$cache->forget(string $cacheKey, string $namespace = ''): bool
-$cache->pull(string $cacheKey, string $namespace = ''): mixed
-$cache->missing(string $cacheKey, string $namespace = ''): bool
-```
-
-- `forget()` — alias for `clearCache()`.
-- `pull()` — alias for `getAndForget()`; returns the value and removes the key atomically. Returns `null` on miss.
-- `missing()` — inverse of `has()`.
-
-```php
-$cache->putCache('temp', 'short-lived');
-
-$value = $cache->pull('temp');     // returns 'short-lived', key is gone
-$cache->missing('temp');           // true
-$cache->forget('absent');          // safe no-op style call
-```
-
-### Fluent namespace context — `in()` / `namespace()` / `withoutNamespace()`
-
-```php
-$cache->in(string $namespace): PendingCache
-$cache->namespace(string $namespace): PendingCache
-$cache->withoutNamespace(): PendingCache
-```
-
-All three return an immutable `PendingCache` wrapper bound to a namespace. The underlying `Cacheer` is **never mutated**, so this is safe under the static facade.
-
-```php
-$cache->in('users')->put('123', $user);
-$cache->in('users')->get('123');
-
-// Dot notation, two equivalent forms:
-$cache->in('users.123')->put('profile', $profile);
-$cache->in('users')->in('123')->put('profile', $profile);
-
-// Chain away from a previously-bound namespace:
-$cache->in('tenant-a')->withoutNamespace()->put('shared', $value);
-```
-
-`PendingCache` exposes: `get`, `getMany`, `put`, `add`, `has`, `missing`, `forget`, `pull`, `remember`, `rememberForever`, plus chain methods `in`, `namespace`, `withoutNamespace` and the accessors `getNamespace()` / `cacheer()`.
-
-### `putMany()` — simple associative form
-
-```php
-// v5.0.x legacy form (still supported):
-$cache->putMany([
-    ['cacheKey' => 'k1', 'cacheData' => 'v1'],
-    ['cacheKey' => 'k2', 'cacheData' => 'v2'],
-]);
-
-// v5.1.0 simple form:
-$cache->putMany([
-    'k1' => 'v1',
-    'k2' => 'v2',
-]);
-
-// With namespace:
-$cache->putMany(['x' => 1, 'y' => 2], 'orders');
-```
-
-The two shapes can even be mixed in the same call.
-
-### `increment()` / `decrement()` — optional default & TTL
-
-```php
-$cache->increment(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
-$cache->decrement(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
-```
-
-- When `$default === null` (the legacy default), `increment()` / `decrement()` keep the v5.0.x behaviour: missing keys return `false`.
-- When `$default` is provided, missing keys are **created** with `$default + $amount` (or `$default - $amount` for `decrement`) and the optional `$ttl` is applied.
-- `$ttl = null` means *forever* — the lifetime of an already-existing entry is **not** changed by an increment unless you pass an explicit TTL.
-- Falsy stored values (`0`, `'0'`, …) are real cache hits. They are recognised via `isSuccess()`, not via PHP truthiness, so `increment('counter')` works correctly when the stored value is `0`.
-
-```php
-// Legacy behaviour preserved:
-$cache->increment('missing'); // false
-
-// v5.1.0 opt-in create-on-miss:
-$cache->increment('hits', 1, '', 0);            // creates 'hits' = 1, returns true
-$cache->increment('budget', 10, '', 100);        // missing → starts from default 100, stored = 110
-$cache->increment('rate', 1, '', 0, '1 hour');   // create-on-miss with 1h TTL
-```
-
----
-
-## v5.2.0 Additions (backwards-compatible)
-
-### Distributed locks — `lock()`
-
-```php
-$cache->lock(string $name, int $ttl = 60): \Silviooosilva\CacheerPhp\Support\CacheLock
-```
-
-A named, driver-backed mutex so only one process runs a critical section at a time. Acquire it manually, wait for it, or run a callback under it:
-
-```php
-// Run exclusively; others get false instead of running the callback.
-$cache->lock('rebuild-report', 30)->get(fn () => rebuildReport());
-
-// Wait up to 5s for the lock, then run.
-$cache->lock('export', 30)->block(5, fn () => generateExport());
-
-// Manual acquire / release.
-$lock = $cache->lock('job', 120);
-if ($lock->acquire()) {
-    try { runJob(); } finally { $lock->release(); }
-}
-```
-
-Backed natively by each driver — Redis `SET NX`, a Database locks table, or file `flock` — and available on the static facade (`Cacheer::lock(...)`). See the full [Distributed Locks reference](./locks.md).
-
-### Atomic `increment()` / `decrement()`
-
-Counter updates are now serialised on a per-key lock, so concurrent increments no longer lose updates on the File, Database, and Redis drivers. Signatures and behaviour are unchanged — see [Numeric operations](#increment--decrement--numeric-operations) above.
-
-### Stampede-safe `remember()` and `flexible()`
-
-[`remember()`](#remember--get-or-compute-with-ttl) now serialises a concurrent miss behind a per-key single-flight lock, so the callback runs once instead of once per request (no cache stampede). The new [`flexible()`](#flexible--stale-while-revalidate) adds stale-while-revalidate: serve fresh values directly, serve stale ones while a single worker refreshes, and recompute once expired. Both honour the fluent namespace context (`in('reports')->remember(...)`).
-
+See [Stores & capabilities](./drivers.md) for the full list.

@@ -1,96 +1,37 @@
-# Exemplo 15 — Estatísticas e Gestão de Instâncias
+# Observabilidade: eventos e métricas
 
-*Novo na v5.0.0*
+> O `stats()` da v5 reportava flags do driver. A v6 dá eventos tipados e um coletor de
+> métricas em processo — sem nunca registrar seus valores de cache.
 
-O CacheerPHP v5.0.0 adiciona métodos de diagnóstico e de ciclo de vida que facilitam inspecionar, testar e gerir instâncias de cache.
-
-## stats() — Inspecionar o Estado do Cache
-
-`stats()` devolve um array associativo com o driver ativo e o estado da compressão e da encriptação:
+Embrulhe uma store com `instrumented`, anexe um `MetricsCollector` e leia um snapshot.
 
 ```php
-<?php
-require_once __DIR__ . '/../vendor/autoload.php';
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Observability\{EventBus, MetricsCollector};
+use Silviooosilva\CacheerPhp\Stores\ArrayStore;
+use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-use Silviooosilva\CacheerPhp\Cacheer;
+$events  = new EventBus();
+$metrics = new MetricsCollector();
+$events->listen($metrics->record(...));
 
-$cache = new Cacheer();
-$cache->setDriver()->useArrayDriver();
-$cache->useCompression();
+$cache = Cache::instrumented(new ArrayStore(new SystemClock()), $events);
 
-$info = $cache->stats();
-print_r($info);
-// [
-//     'driver'      => 'Silviooosilva\CacheerPhp\CacheStore\ArrayCacheStore',
-//     'compression' => true,
-//     'encryption'  => false,
-// ]
+$cache->set('a', 1);
+$cache->get('a');       // hit
+$cache->get('missing'); // miss
+
+$metrics->snapshot();
+// ['hits' => 1, 'misses' => 1, 'hit_rate' => 0.5, 'writes' => 1, 'bytes_written' => ..., 'avg_micros' => ...]
 ```
 
-## getCacheStore() / setCacheStore() — Troca de Driver em Runtime
-
-Pode obter ou substituir o store subjacente em runtime:
+Logue os mesmos eventos (apenas metadados) via PSR-3:
 
 ```php
-use Silviooosilva\CacheerPhp\CacheStore\ArrayCacheStore;
+use Silviooosilva\CacheerPhp\Observability\PsrLoggerSubscriber;
 
-// Obter o store atual
-$store = $cache->getCacheStore();
-echo get_class($store);
-
-// Trocar para outro store em runtime
-$cache->setCacheStore(new ArrayCacheStore('/tmp/cacheer.log'));
+$events->listen(new PsrLoggerSubscriber($psrLogger));
 ```
 
-## resetInstance() — Limpar o Singleton Estático
-
-Ao usar o CacheerPHP por chamadas estáticas, o singleton persiste durante a vida do processo. Use `resetInstance()` para o limpar — útil em testes ou workers de longa duração:
-
-```php
-// O uso estático cria um singleton
-Cacheer::setDriver()->useArrayDriver();
-Cacheer::putCache('key', 'value');
-
-// Reset para começar do zero
-Cacheer::resetInstance();
-
-// A próxima chamada estática cria uma instância nova
-Cacheer::setDriver()->useArrayDriver();
-var_dump(Cacheer::has('key')); // false — os dados anteriores desapareceram
-```
-
-## setInstance() — Injetar uma Instância Personalizada
-
-Substitua o singleton estático por uma instância pré-configurada. Útil para testes ou injeção de dependências:
-
-```php
-$testCache = new Cacheer();
-$testCache->setDriver()->useArrayDriver();
-$testCache->putCache('fixture', 'data');
-
-// Injetar no singleton estático
-Cacheer::setInstance($testCache);
-
-// As chamadas estáticas passam a usar a instância injetada
-echo Cacheer::getCache('fixture'); // "data"
-```
-
-## getOptions() / setOption() / setOptions()
-
-Inspecione ou modifique a configuração em runtime:
-
-```php
-$cache = new Cacheer(['cacheDir' => __DIR__ . '/cache']);
-
-// Ler todas as opções
-$opts = $cache->getOptions();
-
-// Definir uma única opção
-$cache->setOption('expirationTime', '2 hours');
-
-// Substituir todas as opções
-$cache->setOptions([
-    'cacheDir' => '/tmp/cache',
-    'expirationTime' => '30 minutes',
-]);
-```
+A captura de valores está desligada por padrão, e falhas de listeners não podem quebrar
+uma operação de cache. Veja o [guia de Observabilidade](../guias/observabilidade.md).

@@ -1,192 +1,96 @@
-## API Reference
+# Value objects — Key, Scope, Ttl, CacheEntry
 
-The **OptionBuilder** allows you to define different parameters for configuring CacheerPHP, giving it more security, robustness and speed of execution, as well as excluding possible errors, such as typos, for example.
+> v5's `OptionBuilder` is gone. v6 configures stores through
+> [named constructors](./cache-functions.md#named-constructors) and a typed
+> [`PipelineConfig`](./config.md). The typed value objects below replace the
+> stringly-typed arguments v5 passed around.
 
-Also check out the **TimeBuilder**: [TimeBuilder - Introduction](./time-builder.md)
+All four objects live in `Silviooosilva\CacheerPhp\Kernel`. They are immutable
+and validated on construction.
 
-It supports builders for File, Redis and Database stores, helping you define options fluently and safely.
+## `Key`
 
-You've seen that parameters are very susceptible to typing errors, right?
-The **OptionBuilder** arises from the need to eliminate these possible errors.
-
-#### `setUp(array $options): void`
-
-Sets up the `Cacheer` instance with the provided options.
-
-- **Parameters**:
-  - `array $options`: An associative array of configuration options (e.g., `driver`, `path`, etc.).
-
-- **Example**:
-  ```php
-
-  <?php
-  $cache = new Cacheer();
-  $options = [
-      'driver' => 'file',
-      'path' => '/tmp/cache',
-  ];
-  $cache->setUp($options);
-  ```
-
-#### `getOptions(): array`
-
-Retrieves the current configuration options for the `Cacheer` instance.
-
-- **Returns**:
-  - `array`: The current configuration options.
-
-- **Example**:
-  ```php
-
-  <?php
-  $cache = new Cacheer();
-  $options = $cache->getOptions();
-  var_dump($options);
-  ```
-
-#### `OptionBuilder()`
-
-The **OptionBuilder** has specific methods for configuring each type of cache driver supported.
-Each one initializes the configuration for a given driver and returns an instance of the corresponding builder.
-
-`forFile()`
+A validated cache key, optionally bound to a [`Scope`](#scope).
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Key;
 
-<?php
-$Options = OptionBuilder::forFile();
-```
-This method initializes FileCacheStore, allowing you to configure the cache directory, expiration time and periodic clearing of the cache.
+Key::named(string $value): self   // throws InvalidKeyException if empty, >1024 bytes, or has control chars
 
-Methods available after `forFile()`
-
-```sh
-dir(string $path) → Defines the directory where the cache files will be stored.
-loggerPath(string $path) → Sets the file path for cache operation logs.
-expirationTime(string $time) → Sets the expiration time of the files in the cache.
-flushAfter(string $interval) → Sets a time to automatically flush the files from the cache.
-build() → Finalizes the configuration and returns an array of options ready for use.
+$key->value(): string             // the raw name
+$key->scope(): Scope              // its scope (root by default)
+$key->within(Scope $scope): self  // a copy bound to $scope
+$key->identity(): string          // collision-free internal identity
 ```
 
-**Example of use**
+Every `Cache` method accepts a plain string too; it is wrapped as
+`Key::named($string)` in the caller's scope.
+
+## `Scope`
+
+An isolated keyspace. Scopes are ordered segment lists; the root scope is empty.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Scope;
 
-<?php
-require_once __DIR__ . "/../vendor/autoload.php"; 
+Scope::root(): self
+Scope::named(string $segment): self
+Scope::fromSegments(iterable $segments): self
 
-$Options = OptionBuilder::forFile()
-    ->dir(__DIR__ . "/cache")
-    ->loggerPath(__DIR__ . "/logs/cache.log")
-    ->expirationTime("2 hours")
-    ->flushAfter("1 day")
-    ->build();
-
-$Cacheer = new Cacheer($Options);
-$Cacheer->setDriver()->useFileDriver(); //File Driver
+$scope->child(string $segment): self   // append one segment
+$scope->append(Scope $other): self
+$scope->isRoot(): bool
+$scope->segments(): array
+$scope->contains(Scope $other): bool   // is $other within $scope?
 ```
 
-> **Note:** Cacheer methods may also be called statically, e.g. `Cacheer::setDriver()->useFileDriver();`
+Segments cannot be empty, exceed 255 bytes, or contain slashes or control
+characters (`InvalidScopeException`). A scope may hold at most 64 segments. See
+the [Scopes guide](../guides/scopes.md).
 
-`forRedis()`
+## `Ttl`
+
+A normalized time-to-live. See [TTL & Clock](./time-builder.md) for the accepted
+input forms and forever semantics.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-<?php
-$Options = OptionBuilder::forRedis()
-    ->setNamespace('app:')
-    ->loggerPath(__DIR__ . '/logs/cache.log')
-    ->expirationTime('2 hours')
-    ->flushAfter('1 day')
-    ->build();
-```
-This method initializes Redis options. You can set a key namespace prefix and optionally default expiration/auto-flush intervals.
+Ttl::forever(): self
+Ttl::seconds(int): self            // must be > 0
+Ttl::minutes(int) / ::hours(int) / ::days(int) / ::weeks(int): self
+Ttl::until(DateTimeInterface $when, Clock $clock): self
+Ttl::from(Ttl|DateInterval|int|string|null): self  // the normalizer Cache uses
 
-Behavior:
-- `expirationTime` sets a default TTL used when you do not pass a TTL to `putCache()` or when you pass the implicit default of `3600`. Explicit TTL values other than `3600` always take precedence.
-- `flushAfter` enables an auto-flush check on store initialization. If the last flush timestamp is older than the interval, Cacheer will execute `flushCache()` for the Redis store namespace.
-
-Methods available after `forRedis()`
-
-```sh
-setNamespace(string $prefix) → Sets the key namespace prefix.
-loggerPath(string $path) → Sets the file path for cache operation logs.
-expirationTime(string $time) → Sets a default TTL hint.
-flushAfter(string $interval) → Sets an auto-flush hint.
-build() → Finalizes and returns an options array.
+$ttl->isForever(): bool
+$ttl->inSeconds(): ?int            // null when forever
+$ttl->expiresAt(Clock $clock): ?int  // absolute unix ts, or null when forever
 ```
 
-`forDatabase()`
+## `CacheEntry`
+
+The result of a read. Distinguishes a **miss** from a cached `null`.
 
 ```php
+$entry = $cache->entry('user:42');
 
-<?php
-$Options = OptionBuilder::forDatabase()
-    ->table('cache_items')
-    ->loggerPath(__DIR__ . '/logs/cache.log')
-    ->expirationTime('1 day')
-    ->flushAfter('7 days')
-    ->build();
+$entry->isHit(): bool
+$entry->isMiss(): bool
+$entry->value(): mixed                 // throws CacheMissException on a miss
+$entry->valueOr(mixed $default): mixed // safe accessor
+$entry->createdAt(): ?int              // unix ts of the write
+$entry->expiresAt(): ?int              // unix ts, or null when forever
+$entry->isExpired(Clock $clock): bool
+$entry->remainingTtl(Clock $clock): ?int  // seconds left, null when forever, 0 on a miss
 ```
-This method initializes Database options. You can set the storage table and optional time controls.
-
-Behavior:
-- `expirationTime` sets a default TTL used when you do not pass a TTL to `putCache()` or when you pass the implicit default of `3600`. Explicit TTL values other than `3600` always take precedence.
-- `flushAfter` enables an auto-flush check on store initialization. If the last flush timestamp is older than the interval, Cacheer will execute `flushCache()` for the configured table.
-
-Methods available after `forDatabase()`
-
-```sh
-table(string $table) → Defines the table used for storage.
-loggerPath(string $path) → Sets the file path for cache operation logs.
-expirationTime(string $time) → Sets a default TTL hint.
-flushAfter(string $interval) → Sets an auto-flush hint.
-build() → Finalizes and returns an options array.
-```
-
-The **OptionBuilder** simplifies the configuration of the **CacheerPHP** by eliminating typing errors and making the process more intuitive.
-Now all you have to do is choose the method corresponding to the desired driver and set the necessary parameters to ensure efficient and optimized caching. 🚀
-
-Examples
----
-
-Redis with default TTL and auto-flush:
 
 ```php
-
-<?php
-$options = OptionBuilder::forRedis()
-  ->setNamespace('app:')
-  ->loggerPath(__DIR__ . '/logs/cache.log')
-  ->expirationTime('2 hours')
-  ->flushAfter('1 day')
-  ->build();
-
-$cache = new Cacheer($options);
-$cache->setDriver()->useRedisDriver();
-
-// Uses default TTL (2 hours)
-$cache->putCache('session_123', ['id' => 123]);
-
-// Explicit TTL overrides default (10 minutes)
-$cache->putCache('session_456', ['id' => 456], '', '10 minutes');
+$entry = $cache->entry('token');
+if ($entry->isHit()) {
+    echo $entry->value();
+    echo $entry->remainingTtl(new SystemClock()) ?? 'never expires';
+}
 ```
 
-Database with custom table, default TTL and auto-flush:
-
-```php
-
-<?php
-$options = OptionBuilder::forDatabase()
-  ->table('cache_items')
-  ->loggerPath(__DIR__ . '/logs/cache.log')
-  ->expirationTime('30 minutes')
-  ->flushAfter('7 days')
-  ->build();
-
-$cache = new Cacheer($options);
-$cache->setDriver()->useDatabaseDriver();
-
-// Uses default TTL (30 minutes)
-$cache->putCache('user_1', ['name' => 'Jane']);
-```
+A cached `null` returns `isHit() === true` and `value() === null` — something
+`get()` cannot express, which is why `entry()` exists.

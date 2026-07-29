@@ -1,67 +1,36 @@
-# Example 14 — Conditional Store with add()
+# Atomic counters & compare-and-swap
 
-*Fixed in v5.0.0*
-
-The `add()` method stores a value **only if the key does not already exist**. It returns `true` when the value was stored and `false` when the key was already present.
-
-> **Breaking change:** In v4.x the return values were inverted. See the [migration guide](../updating/v5-migration.md) for details.
-
-## Basic Usage
+Counters and conditional writes are a store capability (`AtomicStore`), atomic to
+the guarantee of the backend.
 
 ```php
-<?php
-require_once __DIR__ . '/../vendor/autoload.php';
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Kernel\Key;
+use Silviooosilva\CacheerPhp\Stores\FileStore;
 
-use Silviooosilva\CacheerPhp\Cacheer;
+$store = new FileStore(__DIR__ . '/cache');
 
-$cache = new Cacheer();
-$cache->setDriver()->useArrayDriver();
+// increment(Key, int $amount = 1, ?int $initial = null, ?Ttl $ttl = null): int
+$store->increment(Key::named('page:views'));            // 1
+$store->increment(Key::named('page:views'), amount: 5); // 6
+$store->increment(Key::named('score'), initial: 100);   // starts at 100 + 1 = 101
 
-// First call — key does not exist, value is stored
-$stored = $cache->add('lock', getmypid(), ttl: 30);
-var_dump($stored); // true
-
-// Second call — key already exists, nothing happens
-$stored = $cache->add('lock', 99999, ttl: 30);
-var_dump($stored); // false
-
-// Original value is preserved
-echo $cache->getCache('lock'); // prints the first PID
+// Decrement is a negative increment.
+$store->increment(Key::named('stock'), amount: -1);
 ```
 
-## Use Case: Simple Lock
+Compare-and-swap writes only if the current value matches — a lock-free way to
+guard a transition:
 
 ```php
-function acquireLock(Cacheer $cache, string $resource, int $ttlSeconds = 10): bool
-{
-    return $cache->add("lock:{$resource}", getmypid(), ttl: $ttlSeconds);
-}
-
-function releaseLock(Cacheer $cache, string $resource): void
-{
-    $cache->clearCache("lock:{$resource}");
-}
-
-if (acquireLock($cache, 'report-generation')) {
-    try {
-        // Only one process runs this at a time
-        generateReport();
-    } finally {
-        releaseLock($cache, 'report-generation');
-    }
-} else {
-    echo "Another process is already generating the report.";
+// compareAndSwap(Key, mixed $expected, mixed $value, ?Ttl = null): bool
+$ok = $store->compareAndSwap(Key::named('job:state'), 'idle', 'running');
+if ($ok) {
+    // we won the race; run the job
 }
 ```
 
-## Use Case: Default Settings
-
-```php
-// Initialize defaults without overwriting user customizations
-$cache->add('settings:theme', 'light');
-$cache->add('settings:language', 'en');
-$cache->add('settings:per_page', 25);
-
-// If the user already chose "dark", the line above is a no-op
-echo $cache->getCache('settings:theme'); // "dark" (user's choice preserved)
-```
+Guarantees per backend: `ArrayStore` is atomic within one process; `FileStore`
+serializes on a per-key file lock; `DatabaseStore` uses a row-locked
+read-modify-write; `RedisStore` uses server-side atomics. See
+[Remember & locks](../guides/remember-and-locks.md#atomic-counters).

@@ -1,93 +1,73 @@
-# API Reference — Overview
+# Architecture overview
 
-## Main Class
+CacheerPHP 6 is built from small, composable pieces. You interact with a `Cache`
+kernel; it delegates to a `Store`; optional decorators add tiering, resilience,
+and instrumentation; and a storage pipeline turns values into a safe, versioned
+envelope.
 
+```text
+Public API
+  Cache / ScopedCache / PolicyCache
+          |
+Core value objects
+  Key / Scope / Ttl / CacheEntry / Clock
+          |
+Decorators (optional, composable)
+  TieredStore / ResilientStore / InstrumentedStore
+          |
+Store contract (+ optional capabilities)
+  Store: get / set / delete / clear
+          |
+Built-in stores
+  ArrayStore / FileStore / DatabaseStore / RedisStore
+          |
+Storage pipeline
+  serialize -> compress -> authenticated-encrypt -> versioned Envelope
 ```
-Silviooosilva\CacheerPhp\Cacheer
+
+## Namespaces
+
+| Namespace | Contents |
+|---|---|
+| `Kernel\` | `Cache`, `ScopedCache`, `PolicyCache`, and the value objects `Key`, `Scope`, `Ttl`, `CacheEntry` |
+| `Contracts\` | `Store` and the capability interfaces (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`), plus `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
+| `Stores\` | `ArrayStore`, `FileStore`, `DatabaseStore`, `RedisStore`, and the decorators `TieredStore`, `ResilientStore`, `InstrumentedStore` |
+| `Storage\` | `Envelope`, `EnvelopeCodec`, serializers, compression, encryption, key encoding, and the v5 reader |
+| `Config\` | `PipelineConfig`, `CachePolicy` |
+| `Support\` | `SystemClock`, `CircuitBreaker`, deferred executors |
+| `Observability\` | `CacheEvent`, `CacheEventType`, `EventBus`, `MetricsCollector`, PSR-3/PSR-14 bridges |
+| `Psr\` | `Psr16Cache`, `Psr6Pool`, `Psr6Item` |
+| `Console\` | the `cacheer` operations CLI |
+| `Compat\` | `LegacyCacheer` — the v5 bridge |
+
+## The minimal Store contract
+
+A store only has to implement four methods:
+
+```php
+interface Store
+{
+    public function get(Key $key): CacheEntry;
+    public function set(Key $key, mixed $value, Ttl $ttl): void;
+    public function delete(Key $key): bool;
+    public function clear(): void;
+}
 ```
 
-The facade class for all caching operations. Supports both instance usage (`$cache->method()`) and static calls (`Cacheer::method()`).
+Everything else — batching, tags, locks, atomic counters, touch, prune, inspect,
+scoped flush — is an **optional capability** the store declares by implementing an
+interface. See [Stores & capabilities](./drivers.md).
 
----
+## Reading vs. inspecting
 
-## Architecture at a Glance
+- `Cache::get($key, $default)` returns the value or your default. Simple.
+- `Cache::entry($key)` returns a [`CacheEntry`](./option-builder.md#cacheentry)
+  so you can distinguish a stored `null` from a miss and read timestamps and
+  remaining TTL.
 
-```
-Cacheer (facade)
-├── CacheMutator      — write operations (put, clear, flush, add, increment, tag)
-├── CacheRetriever    — read operations (get, getAll, getMany, remember)
-├── CacheConfig       — timezone, driver, logger path
-├── CacheDriver       — backend selection
-│   ├── FileCacheStore
-│   ├── DatabaseCacheStore
-│   ├── RedisCacheStore
-│   └── ArrayCacheStore
-├── Psr16CacheAdapter — PSR-16 CacheInterface wrapper (v5.0.0)
-└── CacheLogger       — PSR-3 AbstractLogger (v5.0.0)
-```
+## Where configuration lives
 
----
-
-## API Sections
-
-### 1. Configuration
-
-`setConfig()` returns a `CacheConfig` instance for timezone, database connection, and logger path.
-
-[Full reference](./config.md)
-
-### 2. Drivers
-
-`setDriver()` returns a `CacheDriver` instance for selecting the backend.
-
-| Method | Backend | Requires |
-|--------|---------|----------|
-| `useFileDriver()` | Local filesystem | `cacheDir` option |
-| `useDatabaseDriver()` | MySQL / PostgreSQL / SQLite | PDO + configured `.env` |
-| `useRedisDriver()` | Redis server | `predis/predis` |
-| `useArrayDriver()` | In-memory PHP array | Nothing (ideal for tests) |
-
-[Full reference](./drivers.md)
-
-### 3. OptionBuilder
-
-Fluent builders that eliminate typos and centralize configuration:
-
-- `OptionBuilder::forFile()` — `dir()`, `expirationTime()`, `flushAfter()`
-- `OptionBuilder::forRedis()` — `setNamespace()`, `expirationTime()`, `flushAfter()`
-- `OptionBuilder::forDatabase()` — `table()`, `expirationTime()`, `flushAfter()`
-
-[Full reference](./option-builder.md) | [TimeBuilder](./time-builder.md)
-
-### 4. Cache Functions
-
-All read/write operations, tagging, computed values, and diagnostics.
-
-[Full reference](./cache-functions.md)
-
-### 5. Compression & Encryption
-
-- `useCompression()` — gzip via `gzcompress`
-- `useEncryption(string $key)` — AES-256-CBC with random IV per write (v5.0.0)
-
-[Full reference](./compression-encryption.md)
-
-### 6. PSR-16 Adapter *(new in v5.0.0)*
-
-`Psr16CacheAdapter` wraps any `Cacheer` instance into a standard `\Psr\SimpleCache\CacheInterface`.
-
-[Full reference](./psr16-adapter.md)
-
-### 7. Diagnostics *(new in v5.0.0)*
-
-| Method | Description |
-|--------|-------------|
-| `stats()` | Returns driver class, compression flag, and encryption flag |
-| `getCacheStore()` | Returns the active `CacheerInterface` driver |
-| `setCacheStore($driver)` | Swaps the driver at runtime |
-| `getOption($key, $default)` | Returns a single option value, or `$default` if not set |
-| `getOptions()` | Returns the current options array |
-| `setOption($key, $value)` | Sets a single option |
-| `setOptions($array)` | Replaces all options |
-| `Cacheer::resetInstance()` | Clears the static singleton |
-| `Cacheer::setInstance($obj)` | Injects a custom singleton |
+There is no ambient configuration. A `Cache` is exactly what you construct:
+a store (built from a [`PipelineConfig`](./config.md) when it persists), an
+optional `Clock`, a deferred executor, and an event dispatcher. The library never
+reads `.env`, changes the timezone, or creates a schema on its own.

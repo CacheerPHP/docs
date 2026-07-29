@@ -1,8 +1,23 @@
 # CacheerPHP Documentation
 
-**Current version: 5.2.0** | PHP 8.2+ | [Changelog](./updating/v5-migration.md)
+**Current version: 6.0** | PHP 8.3+ | [Migration guide](./updating/index.md)
 
-CacheerPHP is a lightweight, driver-agnostic caching library for PHP. It ships with four built-in backends (File, Database, Redis, Array), a fluent configuration API, optional compression and AES-256-CBC encryption, PSR-16 compliance, and PSR-3 logging — all behind a single, consistent interface.
+CacheerPHP 6 is an **instance-first** cache: a small `Cache` kernel over a minimal
+four-method `Store` contract, with everything else — batching, tags, locks, atomic
+counters, tiering, resilience, encryption — an **optional capability** you opt
+into. There is no global state and no autoload-time side effect. v5 code keeps
+working through the `LegacyCacheer` bridge.
+
+```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+
+$cache = Cache::file(__DIR__ . '/cache');
+
+$cache->set('user:42', $user, ttl: '10 minutes');
+$user = $cache->get('user:42');
+
+$user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
+```
 
 ---
 
@@ -10,36 +25,41 @@ CacheerPHP is a lightweight, driver-agnostic caching library for PHP. It ships w
 
 | Section | Description |
 |---------|-------------|
-| [Getting Started](./getting-started/index.md) | Installation, requirements, and a quick-start example |
-| [Guides](./guides/configuration.md) | Environment variables, database and Redis settings |
-| [API Reference](./api/index.md) | Complete method reference for every public class |
-| [Tutorials](./tutorials/index.md) | Step-by-step examples for common use cases |
-| [Upgrading to v5](./updating/v5-migration.md) | Breaking changes, new features, and migration steps |
-| [Contributing](./contributing/index.md) | How to set up, test, and submit pull requests |
-| [Updating](./updating/index.md) | General upgrade procedures |
+| [Getting Started](./getting-started/index.md) | Install, quick start, stores, scopes, TTL, PSR |
+| [Guides](./guides/configuration.md) | Deep dives: scopes, remember/locks, SWR, tiering, resilience, policies, encryption, observability, CLI, custom stores |
+| [API Reference](./api/index.md) | Precise reference for every public class and method |
+| [Tutorials](./tutorials/index.md) | Short, task-focused v6 examples |
+| [Migration guide](./updating/index.md) | Upgrading from v5 |
+| [Contributing](./contributing/index.md) | Setup, tests, conformance, RFCs |
 
-## What's New in v5.2.0
+## What's New in v6.0
 
-- **Distributed locks** — `Cacheer::lock('name')` returns a driver-backed mutex (`acquire`, `release`, `block`, `get`) so only one process runs a critical section at a time. Native on Redis (`SET NX`), Database (locks table), and File (`flock`); see [Distributed Locks](./api/locks.md).
-- **Atomic `increment()` / `decrement()`** — counter updates are serialised on a per-key lock, so concurrent increments no longer lose updates.
-- **Stampede-safe `remember()`** — a concurrent miss now runs the callback once instead of once per request (no dogpile).
-- **`flexible()` — stale-while-revalidate** — serve fresh values directly, serve stale ones while a single worker refreshes, recompute once expired. See [Cache Functions → flexible()](./api/cache-functions.md#flexible--stale-while-revalidate).
-- **Database falsy-value fix** — storing over an existing `0` / `false` / `''` value on the Database driver now updates correctly instead of failing.
+- **Instance-first kernel.** Explicit `Cache` and immutable `ScopedCache` over
+  typed `Key`, `Scope`, `Ttl`, and `CacheEntry`; time is an injected `Clock`.
+- **Tiny core, honest capabilities.** A store implements four methods; extra
+  behavior is declared by interface and checked at runtime, so a backend never
+  fakes a guarantee it can't make.
+- **Scopes** replace stringly namespaces with isolated keyspaces you can clear on
+  their own.
+- **Composable decorators.** [Tiered](./guides/tiered-caching.md) (L1/L2),
+  [resilient](./guides/resilient-store.md) (circuit-breaker fallback), and
+  [instrumented](./guides/observability.md) (typed events + metrics) wrap any store.
+- **Stampede protection.** Single-flight [`remember()`](./guides/remember-and-locks.md)
+  and stale-while-revalidate [`flexible()`](./guides/stale-while-revalidate.md).
+- **Authenticated storage.** serialize → optional gzip → optional AES-256-GCM into
+  a versioned, tamper-evident envelope, with [key rotation](./guides/encryption-and-compression.md).
+- **Standards & tooling.** [PSR-16 and PSR-6](./api/psr16-adapter.md) adapters,
+  PSR-3 logging, a PSR-14 bridge, and a [`cacheer` CLI](./guides/cli.md).
+- **Migration.** `LegacyCacheer` bridge, an optional Rector rename set, and
+  rewrite-on-read for v5 payloads. See the [migration guide](./updating/index.md).
 
-## What's New in v5.0.0
+## Breaking changes at a glance
 
-- **PSR-16 adapter** — use CacheerPHP anywhere a `\Psr\SimpleCache\CacheInterface` is expected
-- **PSR-3 logger** — `CacheLogger` now extends `\Psr\Log\AbstractLogger`
-- **DateInterval TTL** — pass `int`, `string`, `\DateInterval`, or `null` to any TTL parameter
-- **Random IV encryption** — every `putCache()` generates a fresh IV (AES-256-CBC)
-- **Corrected `add()` semantics** — returns `true` when stored, `false` when the key already exists
-- **Falsy value caching** — `0`, `false`, `''`, `[]` are now valid cache hits
-- **Per-item TTL** — FileCacheStore stores expiry in the cache envelope, not `filemtime`
-- **Encapsulation** — `$cacheStore` and `$options` are now private; use `getCacheStore()`, `getOptions()`, `setOption()`
-- **Instance management** — `stats()`, `resetInstance()`, `setInstance()` for diagnostics and testing
-- **PHP 8.2 minimum** — takes advantage of `readonly` properties and modern PHP features
-
-> **Upgrading from v4?** See the [v5.0.0 Migration Guide](./updating/v5-migration.md) for breaking changes and step-by-step instructions.
+- The static/global facade is not part of the core — use an injected `Cache` or the
+  `LegacyCacheer` bridge.
+- `get()` no longer takes a read-time TTL; positional namespaces become `scope()`;
+  success is a return value or `entry()->isHit()`, not mutable state.
+- Minimum PHP is **8.3**. Driver clients and extensions are optional.
 
 ---
 

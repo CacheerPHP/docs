@@ -1,119 +1,82 @@
-# API Reference — Configuration
+# Configuration
 
-`setConfig()` returns a `CacheConfig` instance with methods for timezone, database connection, logger path, and option management.
+v6 has no ambient configuration — no `.env`, no global timezone, no implicit
+schema. A `Cache` is exactly what you construct. Two things get configured: **how
+the store is built** (named constructors) and **how values are stored**
+(`PipelineConfig`).
 
-> **Tip:** Always set the driver before configuring. See [Drivers](./drivers.md).
+## Named constructors
 
-> **Note:** All methods can be called statically: `Cacheer::setConfig()->setTimeZone('UTC');`
-
----
-
-## Database Connection
-
-```php
-$cache->setConfig()->setDatabaseConnection(string $driver): void
-```
-
-Sets the PDO driver used for the Database cache store.
-
-| Parameter | Values | Default |
-|-----------|--------|---------|
-| `$driver` | `'mysql'`, `'pgsql'`, `'sqlite'` | From `.env` `DB_CONNECTION` |
+The common path needs one line:
 
 ```php
-$cache->setConfig()->setDatabaseConnection('mysql');
-// or
-Cacheer::setConfig()->setDatabaseConnection('sqlite');
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+
+$cache = Cache::inMemory();                    // ArrayStore
+$cache = Cache::file('/var/cache/app');        // FileStore
+$cache = Cache::database($pdo, 'cacheer');     // DatabaseStore (inject your PDO)
+$cache = Cache::redis($connection);            // RedisStore (inject a connection)
 ```
 
-Alternatively, set `DB_CONNECTION` in your `.env` file.
-
----
-
-## Timezone
+Each persistent constructor accepts an optional `PipelineConfig` and `Clock`:
 
 ```php
-$cache->setConfig()->setTimeZone(string $timezone): CacheConfig
+$cache = Cache::file('/var/cache/app', $pipeline, $clock);
 ```
 
-Sets the default timezone for cache expiry calculations. Must be a valid [PHP timezone identifier](https://www.php.net/manual/en/timezones.php).
+See [Cache & ScopedCache](./cache-functions.md#named-constructors) for the full
+signatures, including the `tiered`, `resilient`, and `instrumented` decorators.
+
+## `PipelineConfig` — the storage pipeline
+
+`Silviooosilva\CacheerPhp\Config\PipelineConfig` is an immutable description of
+how a value becomes bytes: **serialize → (compress) → (encrypt)**. Every `with*()`
+returns a new instance, so a base config can be shared and specialized.
 
 ```php
-$cache->setConfig()->setTimeZone('UTC');
-$cache->setConfig()->setTimeZone('America/Sao_Paulo');
+use Silviooosilva\CacheerPhp\Config\PipelineConfig;
+use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
+use Silviooosilva\CacheerPhp\Storage\Compat\V5PayloadReader;
+
+$pipeline = PipelineConfig::default()          // PHP serializer, no compression/encryption
+    ->withJsonSerializer()                     // or a custom Serializer
+    ->withGzip(level: 6)                        // optional compression
+    ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current')) // AES-256-GCM
+    ->withMaxValueBytes(2_000_000)              // reject oversized values on write
+    ->withV5Reader(new V5PayloadReader());      // read v5 payloads during migration
+
+$cache = Cache::file('/var/cache/app', $pipeline);
 ```
 
----
+| Method | Effect |
+|---|---|
+| `default()` | PHP serialization, no compression, no encryption |
+| `withSerializer(Serializer)` / `withJsonSerializer()` | Choose the serializer |
+| `withCompressor(Compressor)` / `withGzip(int $level = 6)` | Add a compression stage |
+| `withEncrypter(Encrypter)` / `withKeyring(Keyring)` | Add authenticated encryption |
+| `withMaxValueBytes(int)` | Enforce a maximum serialized size on write |
+| `withV5Reader(V5PayloadReader)` | Enable reading legacy v5 payloads |
+| `codec()` | Build the ready `EnvelopeCodec` (stores call this) |
 
-## Logger Path
+The pipeline is covered in depth in
+[Compression & encryption](./compression-encryption.md) and the
+[Encryption & compression guide](../guides/encryption-and-compression.md).
+
+## Injecting your own dependencies
+
+For full control, construct `Cache` directly:
 
 ```php
-$cache->setConfig()->setLoggerPath(string $path): Cacheer
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Support\SystemClock;
+
+$cache = new Cache(
+    store:    $store,
+    clock:    new SystemClock(),
+    executor: $deferredExecutor,   // for after-response stale refresh
+    events:   $eventDispatcher,    // observability
+);
 ```
 
-Defines the file path for the cache logger. The logger implements PSR-3 `\Psr\Log\AbstractLogger` (v5.0.0) and supports automatic log rotation.
-
-```php
-$cache->setConfig()->setLoggerPath('/var/log/cacheer.log');
-```
-
----
-
-## Options Management *(v5.0.0)*
-
-### `setUp()` — Replace all options
-
-```php
-$cache->setUp(array $options): void
-// or via setConfig():
-$cache->setConfig()->setUp($options);
-```
-
-Replaces the entire options array. Commonly used with `OptionBuilder`:
-
-```php
-use Silviooosilva\CacheerPhp\Config\Option\Builder\OptionBuilder;
-
-$options = OptionBuilder::forFile()
-    ->dir(__DIR__ . '/cache')
-    ->expirationTime('2 hours')
-    ->build();
-
-$cache->setUp($options);
-```
-
-### `getOption()` — Read a single option *(new in v5)*
-
-```php
-$cache->getOption(string $key, mixed $default = null): mixed
-```
-
-Returns the value of a single configuration option, or `$default` if the key is not set.
-
-```php
-$dir = $cache->getOption('cacheDir', '/tmp/cache');
-```
-
-### `getOptions()` — Read current options
-
-```php
-$cache->getOptions(): array
-// or via setConfig():
-$cache->setConfig()->getOptions();
-```
-
-Returns the full options array.
-
-### `setOption()` — Set a single option *(new in v5)*
-
-```php
-$cache->setOption(string $key, mixed $value): Cacheer
-```
-
-### `setOptions()` — Replace all options *(new in v5)*
-
-```php
-$cache->setOptions(array $options): void
-```
-
-> **Note:** In v5.0.0, `$cache->options` is private. Use these accessors instead of direct property access.
+Environment parsing belongs to your application or an optional bridge — not to the
+core library.

@@ -1,23 +1,28 @@
-# Example 07 — Array Output Formatter
+# Batch operations
+
+Read, write, and delete many keys at once. On stores that implement `BatchStore`
+(all four built-ins), these use a native multi-key operation or a transaction
+instead of a loop.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-<?php
-require_once  __DIR__  .  "/../vendor/autoload.php";
-use Silviooosilva\\CacheerPhp\\Cacheer;
+$cache = Cache::file(__DIR__ . '/cache');
 
-$options = [
-  "cacheDir" => __DIR__  .  "/cache",
-];
+// Write many under one TTL (keys must be strings).
+$cache->setMany([
+    'user:1' => $u1,
+    'user:2' => $u2,
+    'user:3' => $u3,
+], ttl: '10 minutes');
 
-$Cacheer = new Cacheer($options, $formatted = true);
+// Read many — misses return the default.
+$users = $cache->many(['user:1', 'user:2', 'user:99'], default: null);
+// ['user:1' => $u1, 'user:2' => $u2, 'user:99' => null]
 
-$cacheKey = 'user_profile_1234';
-$userProfile = ['id' => 123, 'name' => 'John Doe'];
-
-Cacheer::putCache($cacheKey, $userProfile);
-$Cacheer->putCache($cacheKey, $userProfile);
-
-$cachedProfile = $Cacheer->getCache($cacheKey, $namespace, $ttl)->toArray();
+// Delete many — true only if every key was removed.
+$cache->deleteMany(['user:1', 'user:2']);
 ```
 
+Batch operations respect the current scope, so
+`$cache->scope('reports')->many([...])` reads within `reports`.

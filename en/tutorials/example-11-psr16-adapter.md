@@ -1,71 +1,27 @@
-# Example 11 — PSR-16 SimpleCache Adapter
+# PSR-16 adapter
 
-*New in v5.0.0*
-
-CacheerPHP ships with a PSR-16 adapter that lets you use it anywhere a standard `\Psr\SimpleCache\CacheInterface` is expected.
-
-## Basic Usage
+Wrap a `Cache` in `Psr16Cache` to hand any interoperable library a standard
+`Psr\SimpleCache\CacheInterface`.
 
 ```php
-<?php
-require_once __DIR__ . '/../vendor/autoload.php';
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Psr\Psr16Cache;
 
-use Silviooosilva\CacheerPhp\Cacheer;
-use Silviooosilva\CacheerPhp\Psr\Psr16CacheAdapter;
+$psr16 = new Psr16Cache(Cache::file(__DIR__ . '/cache'));
 
-$cacheer = new Cacheer(['cacheDir' => __DIR__ . '/cache']);
-$cache   = new Psr16CacheAdapter($cacheer);
+$psr16->set('token', 'abc123', 1800);   // ttl: int seconds, DateInterval, or null
+$psr16->get('token');                    // 'abc123'
+$psr16->get('missing', 'default');       // 'default'
+$psr16->has('token');                    // true
+$psr16->delete('token');
 
-// Store and retrieve
-$cache->set('greeting', 'Hello, PSR-16!', 3600);
-echo $cache->get('greeting');          // Hello, PSR-16!
-echo $cache->has('greeting');          // true
-
-// Default values for misses
-echo $cache->get('missing', 'fallback');  // fallback
+// Multiples
+$psr16->setMultiple(['a' => 1, 'b' => 2], 3600);
+$psr16->getMultiple(['a', 'b', 'c'], 'default');
+$psr16->deleteMultiple(['a', 'b']);
+$psr16->clear();
 ```
 
-## Batch Operations
-
-```php
-$cache->setMultiple([
-    'user:1' => ['name' => 'Alice'],
-    'user:2' => ['name' => 'Bob'],
-], 1800);
-
-$users = $cache->getMultiple(['user:1', 'user:2', 'user:99'], 'NOT FOUND');
-// user:99 => 'NOT FOUND'
-
-$cache->deleteMultiple(['user:1', 'user:2']);
-```
-
-## Namespace Isolation
-
-Different adapter instances can share the same Cacheer backend while keeping keys separate:
-
-```php
-$users    = new Psr16CacheAdapter($cacheer, 'users');
-$sessions = new Psr16CacheAdapter($cacheer, 'sessions');
-
-$users->set('config', 'user-value');
-$sessions->set('config', 'session-value');
-
-echo $users->get('config');     // user-value
-echo $sessions->get('config');  // session-value
-```
-
-## Key Validation
-
-PSR-16 forbids certain characters in keys. Invalid keys throw `CacheInvalidArgumentException`:
-
-```php
-use Silviooosilva\CacheerPhp\Exceptions\CacheInvalidArgumentException;
-
-try {
-    $cache->get('bad:key');
-} catch (CacheInvalidArgumentException $e) {
-    echo $e->getMessage();
-}
-```
-
-See the full [PSR-16 Adapter API reference](../api/psr16-adapter.md).
+Spec behavior honored: reserved key characters (`{}()/\@:`) throw; a `null` TTL
+means forever while `<= 0` deletes; a cached `null` is a hit distinct from the
+default. For the pool/item model, see [PSR-6](../api/psr16-adapter.md#psr-6--psr6pool).

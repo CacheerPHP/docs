@@ -1,28 +1,32 @@
-# Exemplo 04 — Namespaces
+# Escopos (namespaces)
+
+Escopos são keyspaces isolados. Eles substituem os namespaces posicionais por string
+da v5.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-<?php
-require_once __DIR__ . "/../vendor/autoload.php";
+$cache = Cache::file(__DIR__ . '/cache');
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
+// O mesmo nome de chave é independente por escopo.
+$cache->scope('app')->set('config', $appConfig);
+$cache->scope('api')->set('config', $apiConfig);
 
-$options = [
-    "cacheDir" =>  __DIR__ . "/cache",
-];
+$cache->scope('app')->get('config'); // $appConfig
+$cache->scope('api')->get('config'); // $apiConfig
+$cache->get('config');               // null — a raiz é outro keyspace
 
-$Cacheer = new Cacheer($options);
-
-$namespace = 'session_data_01';
-$cacheKey = 'session_456';
-$sessionData = [
-    'user_id' => 456,
-    'login_time' => time(),
-];
-
-Cacheer::putCache($cacheKey, $sessionData, $namespace);
-$Cacheer->putCache($cacheKey, $sessionData, $namespace);
-
-$cachedSessionData = $Cacheer->getCache($cacheKey, $namespace);
+// Limpar apenas um escopo.
+$cache->scope('api')->clear();
 ```
 
+Escopos aninham:
+
+```php
+$tenant = $cache->scope('tenant:42');
+$tenant->scope('reports')->set('daily', $rows);
+$tenant->clear(); // limpa o tenant e tudo abaixo dele
+```
+
+Um `ScopedCache` tem a mesma API que `Cache` — `set`, `get`, `remember`, `flexible`,
+lotes e `scope()` de novo. Veja o [guia de Escopos](../guias/escopos.md).

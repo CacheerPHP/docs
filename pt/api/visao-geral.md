@@ -1,48 +1,73 @@
-# Referência da API — Visão Geral
+# Visão geral da arquitetura
 
-## **Classes Principais**
+O CacheerPHP 6 é construído a partir de peças pequenas e componíveis. Você
+interage com um núcleo `Cache`; ele delega a uma `Store`; decorators opcionais
+adicionam camadas, resiliência e instrumentação; e um pipeline de armazenamento
+transforma valores em um envelope seguro e versionado.
 
-```bash
-Silviooosilva\\CacheerPhp\\Cacheer
+```text
+API pública
+  Cache / ScopedCache / PolicyCache
+          |
+Objetos de valor do núcleo
+  Key / Scope / Ttl / CacheEntry / Clock
+          |
+Decorators (opcionais, componíveis)
+  TieredStore / ResilientStore / InstrumentedStore
+          |
+Contrato Store (+ capacidades opcionais)
+  Store: get / set / delete / clear
+          |
+Stores nativas
+  ArrayStore / FileStore / DatabaseStore / RedisStore
+          |
+Pipeline de armazenamento
+  serialize -> comprime -> criptografa-autenticado -> Envelope versionado
 ```
 
-Classe principal do pacote, usada para todas as operações de cache.
+## Namespaces
 
-## **Métodos**
+| Namespace | Conteúdo |
+|---|---|
+| `Kernel\` | `Cache`, `ScopedCache`, `PolicyCache` e os objetos de valor `Key`, `Scope`, `Ttl`, `CacheEntry` |
+| `Contracts\` | `Store` e as interfaces de capacidade (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`), além de `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
+| `Stores\` | `ArrayStore`, `FileStore`, `DatabaseStore`, `RedisStore` e os decorators `TieredStore`, `ResilientStore`, `InstrumentedStore` |
+| `Storage\` | `Envelope`, `EnvelopeCodec`, serializers, compressão, criptografia, codificação de chave e o leitor v5 |
+| `Config\` | `PipelineConfig`, `CachePolicy` |
+| `Support\` | `SystemClock`, `CircuitBreaker`, executores deferidos |
+| `Observability\` | `CacheEvent`, `CacheEventType`, `EventBus`, `MetricsCollector`, pontes PSR-3/PSR-14 |
+| `Psr\` | `Psr16Cache`, `Psr6Pool`, `Psr6Item` |
+| `Console\` | a CLI de operações `cacheer` |
+| `Compat\` | `LegacyCacheer` — a ponte v5 |
 
-### 1. **Configuração**
+## O contrato Store mínimo
 
-#### `setConfig()`
-Inicia uma configuração personalizada do CacheerPHP.
+Uma store só precisa implementar quatro métodos:
 
-[Referência — setConfig()](./configuracao.md)
+```php
+interface Store
+{
+    public function get(Key $key): CacheEntry;
+    public function set(Key $key, mixed $value, Ttl $ttl): void;
+    public function delete(Key $key): bool;
+    public function clear(): void;
+}
+```
 
-### 2. **Drivers**
-Permite definir os diferentes backends disponíveis para uso.
+Todo o resto — lotes, tags, locks, contadores atômicos, touch, prune, inspect,
+flush por escopo — é uma **capacidade opcional** que a store declara implementando
+uma interface. Veja [Stores e capacidades](./drivers.md).
 
-[Referência — setDriver()](./drivers.md)
+## Ler vs. inspecionar
 
-### 3. **OptionBuilder**
-O **OptionBuilder** simplifica a configuração com builders fluentes por driver:
-- `OptionBuilder::forFile()` → Opções de arquivo (`dir`, `expirationTime`, `flushAfter`)
-- `OptionBuilder::forRedis()` → Opções do Redis (`setNamespace`, `expirationTime` padrão, `flushAfter` auto‑flush)
-- `OptionBuilder::forDatabase()` → Opções de BD (`table`, `expirationTime` padrão, `flushAfter` auto‑flush)
+- `Cache::get($key, $default)` retorna o valor ou seu padrão. Simples.
+- `Cache::entry($key)` retorna um [`CacheEntry`](./construtor-de-opcoes.md#cacheentry)
+  para você distinguir um `null` armazenado de um miss e ler timestamps e TTL
+  restante.
 
-Notas:
-- `expirationTime` funciona como TTL padrão quando você omite o TTL em `putCache()` (ou usa 3600). TTLs explícitos diferentes de 3600 prevalecem.
-- `flushAfter` dispara uma verificação de limpeza automática ao inicializar o store; se o intervalo tiver passado, o store chama `flushCache()`.
+## Onde fica a configuração
 
-[Referência — OptionBuilder](./construtor-de-opcoes.md)
-
-### 4. **Compressão & Criptografia**
-Métodos incorporados para reduzir espaço e proteger dados em cache.
-
-[Referência — Compressão & Criptografia](./compressao-criptografia.md)
-
-### 5. **Tags**
-Agrupe chaves sob tags e invalide de forma eficiente entre drivers.
-
-[Referência — Funções de Cache (tag/flushTag)](./funcoes-cache.md)
-
-Veja um exemplo completo em: [Tutorial de Tagging](../tutoriais/exemplo-10-tagging.md)
-
+Não há configuração ambiente. Um `Cache` é exatamente o que você constrói: uma
+store (construída a partir de um [`PipelineConfig`](./configuracao.md) quando
+persiste), um `Clock` opcional, um executor deferido e um dispatcher de eventos. A
+biblioteca nunca lê `.env`, muda o timezone nem cria schema sozinha.

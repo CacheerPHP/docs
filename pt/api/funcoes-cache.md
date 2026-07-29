@@ -1,377 +1,156 @@
-## Funções de Cache — CacheerPHP
+# Cache e ScopedCache — referência de métodos
 
-CacheerPHP offers a robust set of functions for managing caching in your PHP application. Below is the detailed documentation for each method available:
+`Silviooosilva\CacheerPhp\Kernel\Cache` é o ponto de entrada público. `ScopedCache`
+(retornado por `scope()`) expõe a mesma superfície de leitura/escrita ligada a um
+escopo. Todo argumento de chave aceita uma `string` ou uma
+[`Key`](./construtor-de-opcoes.md#key).
 
----
-
-> **Note:** Each method can be called statically using `Cacheer::method()` or dynamically via an instance `$cache->method()`.
-
-## Basic Cache Operations
-
-### `getCache()` - Retrieves data from the cache
+## Construtores nomeados
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-/**
-* Gets an item from the cache. If the item doesn't exist or is expired, returns null.
-* @param string $cacheKey Unique item key
-* @param string $namespace Namespace for organization
-* @param string|int $ttl Lifetime in seconds (default: 3600)
-* @return CacheDataFormatter|mixed Returns data in special format or raw value
-*/
-$Cacheer->getCache(string $cacheKey, string $namespace, string|int $ttl = 3600);
+Cache::inMemory(?Clock $clock = null): Cache
+Cache::file(string $directory, ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+Cache::database(PDO $pdo, string $table = 'cacheer_store', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+Cache::redis(RedisConnection $connection, string $prefix = 'cacheer', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+
+// Decorators
+Cache::tiered(Store $l1, Store $l2, ?Ttl $l1MaxTtl = null, ?Clock $clock = null, ?DeferredExecutor $executor = null, ?EventDispatcher $events = null): Cache
+Cache::resilient(Store $primary, Store $fallback, ?CircuitBreaker $breaker = null, ?Clock $clock = null, ?DeferredExecutor $executor = null): Cache
+Cache::instrumented(Store $store, EventDispatcher $events, bool $captureValues = false, ?callable $redactor = null, ?Clock $clock = null): Cache
 ```
 
-### `getMany()` - Retrieves multiple items from the cache
+Ou construa diretamente com qualquer store:
 
 ```php
-/**
-* Gets multiple items from the cache by their keys.
-* @param array $cacheKeys Array of item keys
-* @param string $namespace Namespace for organization
-* @param string|int $ttl Lifetime in seconds (default: 3600)
-* @return CacheDataFormatter Returns a formatter with the retrieved items
-*/
-$Cacheer->getMany(array $cacheKeys, string $namespace, string|int $ttl = 3600);
+$cache = new Cache($store, ?Clock $clock, ?DeferredExecutor $executor, ?EventDispatcher $events);
 ```
 
-### `getAll()` - Retrieves all items in a namespace
+## Leitura
+
+### `get()`
 
 ```php
-/**
-* Gets all items in a specific namespace.
-* @param string $namespace Namespace for organization
-* @return CacheDataFormatter Returns a formatter with all items in the namespace
-*/
-$Cacheer->getAll(string $namespace);
+public function get(string|Key $key, mixed $default = null): mixed
 ```
 
-### `putCache()` - Stores data in the cache
+Retorna o valor cacheado, ou `$default` no miss. Um `null`/`false`/`0`/`''`
+armazenado é um hit e é retornado como está — passe um sentinela como padrão, ou
+use `entry()`, se precisar distinguir um `null` armazenado de um miss.
+
+### `entry()`
 
 ```php
-
-/**
-* Stores an item in the cache with a specific TTL.
-* @param string $cacheKey Unique item key
-* @param mixed $cacheData Data to be stored (serializable)
-* @param string|int $ttl Lifetime in seconds (default: 3600)
-* @return void
-*/
-$Cacheer->putCache(string $cacheKey, mixed $cacheData, string|int $ttl = 3600);
+public function entry(string|Key $key): CacheEntry
 ```
 
-### `putMany()` - Mass operations
+Retorna o [`CacheEntry`](./construtor-de-opcoes.md#cacheentry) completo — hit/miss,
+valor, timestamps e TTL restante.
 
 ```php
-
-/**
-* Stores multiple cache items at once with shared TTL.
-* @param array $items Associative array [key => value]
-* @param string $namespace Common namespace for all items
-* @param int $batchSize Number of operations per time
-* @return void
-*/
-$Cacheer->putMany(array $items, string $namespace, int $batchSize = 100);
+$entry = $cache->entry('user:42');
+if ($entry->isHit()) {
+    $value = $entry->value();
+    $ttl   = $entry->remainingTtl($clock); // segundos, ou null se para sempre
+}
 ```
 
-### `appendCache()` - Adding to existing cache
+### `has()` e `many()`
 
 ```php
-/**
-* Adds data to an existing cache item (useful for arrays or strings).
-* @param string $cacheKey Existing item key
-* @param mixed $cacheData Data to be added
-* @param string $namespace Item namespace
-* @return void
-*/
-$Cacheer->appendCache(string $cacheKey, mixed $cacheData, string $namespace);
+public function has(string|Key $key): bool
+public function many(iterable $keys, mixed $default = null): array
 ```
 
-### `has()` - Checks if a key exists in the cache and is still valid (has not expired).
+`has()` é `true` quando existe uma entrada viva. `many()` retorna `[chave =>
+valor]`, usando `$default` para misses, com leitura em lote nativa quando a store é
+[`BatchStore`](./drivers.md#interfaces-de-capacidade).
+
+## Escrita
+
+### `set()` e `setMany()`
 
 ```php
-/**
-* Checks whether a particular cache key exists, and whether it is still valid.
-* @param string $cacheKey
-* @param string $namespace
-* @return void
-*/
-$Cacheer->has(string $cacheKey, string $namespace);
+public function set(string|Key $key, mixed $value, Ttl|DateInterval|int|string|null $ttl = null): void
+public function setMany(iterable $values, Ttl|DateInterval|int|string|null $ttl = null): void
 ```
 
-### `renewCache()` - Renew cache TTL
-
+O TTL aceita um [`Ttl`](./construtor-de-tempo.md), int (segundos), string legível
+(`'10 minutes'`), `DateInterval` ou `null` (para sempre).
 
 ```php
-/**
-* Updates the lifetime of an existing item without modifying its data.
-* @param string $cacheKey Item key
-* @param string|int $ttl New TTL in seconds (default: 3600)
-* @param string $namespace Item namespace
-* @return mixed Returns the item data or false if it fails
-*/
-$Cacheer->renewCache(string $cacheKey, string|int $ttl = 3600, string $namespace);
+$cache->set('user:42', $user, ttl: '10 minutes');
+$cache->set('config', $config, ttl: null); // para sempre
 ```
 
-### `increment()` - Numeric increment
+### `delete()`, `deleteMany()`, `clear()`
 
 ```php
-/**
-* Increments a numeric value in the cache.
-* @param string $cacheKey Item key
-* @param int $amount Value to increment (default: 1)
-* @param string $namespace Item namespace
-* @return bool True if successful
-*/
-$Cacheer->increment(string $cacheKey, int $amount, string $namespace);
+public function delete(string|Key $key): bool        // true se removeu
+public function deleteMany(iterable $keys): bool      // true só se removeu todas
+public function clear(): void                         // apenas o keyspace deste cache
 ```
 
-### `decrement()` - Numerical decrement
+Em um `ScopedCache`, `clear()` remove apenas aquele escopo (requer
+[`FlushableScopeStore`](./drivers.md#interfaces-de-capacidade)).
+
+## Cálculo e armazenamento
+
+### `remember()`
 
 ```php
-/**
-* Decrements a numeric value in the cache.
-* @param string $cacheKey Item key
-* @param int $amount Value to decrement (default: 1)
-* @param string $namespace Item namespace
-* @return bool True if successful
-*/
-$Cacheer->decrement(string $cacheKey, int $amount, string $namespace);
+public function remember(string|Key $key, Ttl|DateInterval|int|string|null $ttl, callable $callback): mixed
 ```
 
-### `forever()` - Permanent storage
+Retorna o valor cacheado; no miss, executa `$callback`, guarda o resultado sob
+`$ttl` e o retorna. Quando a store é [`LockingStore`](./locks.md), `remember()` é
+**single-flight**: um chamador calcula enquanto os outros esperam e leem o
+resultado (sem dogpile).
 
 ```php
-/**
-* Stores an item in the cache with no expiration time.
-* @param string $cacheKey Unique key
-* @param mixed $cacheData Data to be stored
-* @return void
-*/
-$Cacheer->forever(string $cacheKey, mixed $cacheData);
+$user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 ```
 
-### `remember()` - Standard “Get or Calculate”
+### `flexible()` — stale-while-revalidate
 
 ```php
-/**
-* Gets the item from the cache or executes the closure and stores the result.
-* @param string $cacheKey Item key
-* @param int|string $ttl Lifetime in seconds
-* @param Closure $callback Function that returns the data if the cache does not exist
-* @return mixed
-*/
-$Cacheer->remember(string $cacheKey, int|string $ttl, Closure $callback);
+public function flexible(string|Key $key, int $fresh, int $stale, callable $callback): mixed
 ```
 
-### `rememberForever()` - Standard “Get or Calculate” forever 
+Serve o valor diretamente enquanto está *fresco* (até `$fresh` segundos). Entre
+`$fresh` e `$stale` serve o valor **stale** na hora e recarrega uma vez, em segundo
+plano, via executor deferido. Após `$stale`, recalcula de forma síncrona. Requer
+`0 < fresh < stale`. Veja [Stale-while-revalidate](../guias/stale-while-revalidate.md).
+
+## Escopos e políticas
+
+### `scope()` e `withPolicy()`
 
 ```php
-/**
-* Similar to remember, but stores the result without expiration.
-* @param string $cacheKey Item key
-* @param int|string $ttl Lifetime in seconds
-* @param Closure $callback Function that returns the data if the cache does not exist
-* @return mixed
-*/
-$Cacheer->rememberForever(string $cacheKey, int|string $ttl, Closure $callback);
+public function scope(string|Scope $scope): ScopedCache
+public function withPolicy(CachePolicy $policy): PolicyCache
 ```
 
-### `getAndForget()` - Retrieve and remove
-
+`scope()` retorna um [`ScopedCache`](../guias/escopos.md) — um keyspace isolado com
+a mesma API. `withPolicy()` aplica uma [`CachePolicy`](../guias/politicas.md) (TTL
+padrão, jitter, cache negativo, serve-stale-on-error).
 
 ```php
-/**
-* Gets an item from the cache and immediately removes it.
-* @param string $cacheKey Item key
-* @param string $namespace Item namespace
-* @return mixed Item data or null if it doesn't exist
-*/
-$Cacheer->getAndForget(string $cacheKey, string $namespace);
+$cache->scope('reports')->set('daily', $rows);
+$cache = $cache->withPolicy(CachePolicy::defaults()->withTtl('10 minutes')->withJitter(0.10));
 ```
 
-### `add()` - Conditional addition
+## Capacidades além do núcleo
+
+Contadores atômicos, tags, touch, prune e inspeção ficam nas interfaces de
+capacidade da **store**, não em `Cache`. Acesse pela store ou pela ponte
+[`LegacyCacheer`](../atualizacao/index.md):
 
 ```php
-/**
-* Adds an item to the cache only if the key does not exist.
-* @param string $cacheKey Item key
-* @param mixed $cacheData Data to be stored
-* @param string $namespace Item namespace
-* @param int|string $ttl Lifetime in seconds
-* @return bool True if the item was added, false if it already existed
-*/
-$Cacheer->add(string $cacheKey, mixed $cacheData, string $namespace, int|string $ttl);
+$store->increment(Key::named('visits'));        // AtomicStore
+$store->tag(Key::named('p1'), 'products');       // TaggableStore
+$store->prune();                                 // PrunableStore
 ```
 
-### `clearCache()` - Selective cleaning
-
-
-```php
-/**
-* Removes a specific item from the cache.
-* @param string $cacheKey Item key
-* @param string $namespace Item namespace
-* @return void
-*/
-$Cacheer->clearCache(string $cacheKey, string $namespace);
-```
-
-### `flushCache()` - Total cleaning
-
-```php
-/**
-* Removes all items from the cache (complete cleaning).
-* @return void
-*/
-$Cacheer->flushCache();
-```
-
-### `tag()` and `flushTag()` - Group and invalidate by tag
-
-```php
-/**
- * Associates one or more keys with a tag.
- * Accepts both "key" and "namespace:key".
- * Returns true on success.
- */
-$Cacheer->tag(string $tag, string ...$keys): bool;
-
-/**
- * Removes all items associated with a tag.
- * Returns true on success.
- */
-$Cacheer->flushTag(string $tag): bool;
-
-// Basic examples
-Cacheer::putCache('user:1', ['id' => 1]);
-Cacheer::putCache('user:2', ['id' => 2]);
-
-// Without explicit namespace
-Cacheer::tag('users', 'user:1', 'user:2');
-Cacheer::flushTag('users'); // invalidates 'user:1' and 'user:2'
-
-// With explicit namespace
-Cacheer::putCache('profile', ['id' => 10], 'nsA');
-Cacheer::putCache('settings', ['id' => 10], 'nsA');
-Cacheer::tag('grpA', 'nsA:profile', 'nsA:settings');
-Cacheer::flushTag('grpA'); // invalidates nsA:profile and nsA:settings
-```
-
-Implementation notes by driver (summary):
-- File: index persisted in `cacheDir/_tags/{tag}.json`.
-- Redis: index in Set `tag:{tag}`.
-- Database: index in the reserved namespace `__tags__` with key `tag:{tag}`.
-- Array: index in memory, reset on `flushCache()`.
-### `useCompression()` - Enable or disable compression
-
-```php
-$Cacheer->useCompression();
-$Cacheer->useCompression(false);
-```
-
-### `useEncryption()` - Enable AES encryption
-
-```php
-$Cacheer->useEncryption('secret-key');
-```
----
-
-Each of the functions below now returns a boolean indicating the success of the operation. If you prefer, you can still check the status separately:
-
-```php
-$Cacheer->isSuccess(); // Returns true or false
-$Cacheer->getMessage(); // Returns a message
-```
-
----
-
-## Adições da v5.1.0 (totalmente compatíveis)
-
-> Todas as adições da v5.1.0 são **opt-in** e **não-quebrantes**. Cada método, assinatura e tipo de retorno da v5.0.x continua funcionando exatamente como antes.
-
-### Aliases de conveniência — `forget()`, `pull()`, `missing()`
-
-```php
-$cache->forget(string $cacheKey, string $namespace = ''): bool
-$cache->pull(string $cacheKey, string $namespace = ''): mixed
-$cache->missing(string $cacheKey, string $namespace = ''): bool
-```
-
-- `forget()` — alias de `clearCache()`.
-- `pull()` — alias de `getAndForget()`; devolve o valor e remove a chave atomicamente. Retorna `null` em miss.
-- `missing()` — inverso de `has()`.
-
-```php
-$cache->putCache('temp', 'short-lived');
-
-$value = $cache->pull('temp');     // retorna 'short-lived'; chave removida
-$cache->missing('temp');           // true
-```
-
-### Contexto fluente de namespace — `in()` / `namespace()` / `withoutNamespace()`
-
-```php
-$cache->in(string $namespace): PendingCache
-$cache->namespace(string $namespace): PendingCache
-$cache->withoutNamespace(): PendingCache
-```
-
-Os três retornam um wrapper imutável `PendingCache` ligado a um namespace. A instância subjacente de `Cacheer` **nunca é mutada**, então é seguro usar via facade estática.
-
-```php
-$cache->in('users')->put('123', $user);
-$cache->in('users')->get('123');
-
-// Notação por ponto, duas formas equivalentes:
-$cache->in('users.123')->put('profile', $profile);
-$cache->in('users')->in('123')->put('profile', $profile);
-
-// Encadear "saindo" de um namespace previamente vinculado:
-$cache->in('tenant-a')->withoutNamespace()->put('shared', $value);
-```
-
-`PendingCache` expõe: `get`, `getMany`, `put`, `add`, `has`, `missing`, `forget`, `pull`, `remember`, `rememberForever`, mais as cadeias `in`, `namespace`, `withoutNamespace` e os acessores `getNamespace()` / `cacheer()`.
-
-### `putMany()` — forma associativa simples
-
-```php
-// Forma legada da v5.0.x (continua suportada):
-$cache->putMany([
-    ['cacheKey' => 'k1', 'cacheData' => 'v1'],
-    ['cacheKey' => 'k2', 'cacheData' => 'v2'],
-]);
-
-// Forma simples da v5.1.0:
-$cache->putMany([
-    'k1' => 'v1',
-    'k2' => 'v2',
-]);
-
-// Com namespace:
-$cache->putMany(['x' => 1, 'y' => 2], 'orders');
-```
-
-As duas formas podem ser misturadas na mesma chamada.
-
-### `increment()` / `decrement()` — default & TTL opcionais
-
-```php
-$cache->increment(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
-$cache->decrement(string $key, int $amount = 1, string $namespace = '', ?int $default = null, int|string|\DateInterval|null $ttl = null): bool
-```
-
-- Quando `$default === null` (o padrão legado), `increment()` / `decrement()` mantêm o comportamento da v5.0.x: chaves ausentes retornam `false`.
-- Quando `$default` é fornecido, chaves ausentes são **criadas** com `$default + $amount` (ou `$default - $amount` no `decrement`) e o `$ttl` opcional é aplicado.
-- `$ttl = null` significa *forever* — a vida útil de uma entrada já existente **não** é alterada por um increment, a menos que você passe um TTL explícito.
-- Valores falsy armazenados (`0`, `'0'`, …) são hits válidos. São reconhecidos via `isSuccess()`, não pelo truthiness do PHP, então `increment('counter')` funciona corretamente quando o valor armazenado é `0`.
-
-```php
-// Comportamento legado preservado:
-$cache->increment('missing'); // false
-
-// Opt-in da v5.1.0 (cria-no-miss):
-$cache->increment('hits', 1, '', 0);            // cria 'hits' = 1, retorna true
-$cache->increment('budget', 10, '', 100);       // ausente → começa do default 100, armazenado = 110
-$cache->increment('rate', 1, '', 0, '1 hour');  // cria-no-miss com TTL de 1h
-```
+Veja [Stores e capacidades](./drivers.md) para a lista completa.

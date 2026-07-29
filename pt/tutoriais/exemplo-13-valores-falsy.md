@@ -1,80 +1,38 @@
-# Exemplo 13 — Cache de Valores Falsy
+# Valores falsy e null
 
-*Novo na v5.0.0*
-
-O CacheerPHP v5.0.0 guarda e devolve corretamente valores **falsy** como `0`, `''`, `false` e `[]`. Em versões anteriores, estes eram tratados erradamente como cache misses.
-
-## O Problema (v4.x)
+Um `null`, `false`, `0`, `''` ou `[]` cacheado é um **hit**, retornado exatamente como
+armazenado. Só `entry()` consegue distinguir um `null` armazenado de um miss.
 
 ```php
-$cache->putCache('counter', 0);
-$value = $cache->getCache('counter');
-// v4: $value era tratado como "não encontrado" por causa de verificações !empty()
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+
+$cache = Cache::inMemory();
+
+$cache->set('flag', false);
+$cache->set('count', 0);
+$cache->set('nothing', null);
+
+$cache->get('flag');   // false (um hit, não um miss)
+$cache->get('count');  // 0
+$cache->get('nothing'); // null
 ```
 
-## A Correção (v5.0.0)
-
-A v5 usa `isSuccess()` internamente em vez de `!empty()`, pelo que qualquer valor PHP — incluindo os falsy — é devolvido corretamente.
-
-## Guardar e Obter Valores Falsy
+Como `get('nothing')` e `get('absent')` retornam ambos `null`, use `entry()` quando a
+diferença importar:
 
 ```php
-<?php
-require_once __DIR__ . '/../vendor/autoload.php';
-
-use Silviooosilva\CacheerPhp\Cacheer;
-
-$cache = new Cacheer();
-$cache->setDriver()->useArrayDriver();
-
-// Inteiro zero
-$cache->putCache('zero', 0);
-echo $cache->getCache('zero'); // 0
-
-// String vazia
-$cache->putCache('empty_str', '');
-var_dump($cache->getCache('empty_str')); // string(0) ""
-
-// Booleano false
-$cache->putCache('flag', false);
-var_dump($cache->getCache('flag')); // bool(false)
-
-// Array vazio
-$cache->putCache('list', []);
-var_dump($cache->getCache('list')); // array(0) {}
+$cache->entry('nothing')->isHit(); // true  — um null armazenado
+$cache->entry('absent')->isHit();  // false — um miss real
 ```
 
-## remember() com Valores Falsy
-
-O método `remember()` já não volta a executar o callback quando o valor em cache é falsy:
+Ou passe um sentinela como padrão:
 
 ```php
-$callCount = 0;
-
-$value = $cache->remember('counter', 3600, function () use (&$callCount) {
-    $callCount++;
-    return 0; // falsy mas válido
-});
-
-// Segunda chamada — o callback NÃO é invocado outra vez
-$value = $cache->remember('counter', 3600, function () use (&$callCount) {
-    $callCount++;
-    return 0;
-});
-
-echo $callCount; // 1 (e não 2)
-echo $value;     // 0
+$missing = new stdClass();
+if ($cache->get('nothing', $missing) === $missing) {
+    // realmente ausente
+}
 ```
 
-## increment() e decrement() a Partir de Zero
-
-```php
-$cache->putCache('hits', 0);
-
-$cache->increment('hits');
-echo $cache->getCache('hits'); // 1
-
-$cache->putCache('balance', 0);
-$cache->decrement('balance');
-echo $cache->getCache('balance'); // -1
-```
+É por isso que `remember()` não recalcula um resultado legitimamente vazio a cada
+chamada — um `null` armazenado conta como hit.

@@ -1,23 +1,27 @@
-# Example 08 — String Output Formatter
+# Encryption & compression
+
+Persistent stores encode values through a pipeline you describe with a
+`PipelineConfig`. Here's a store that compresses and encrypts every value.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Config\PipelineConfig;
+use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
 
-<?php
-require_once  __DIR__  .  "/../vendor/autoload.php";
-use Silviooosilva\\CacheerPhp\\Cacheer;
+$pipeline = PipelineConfig::default()
+    ->withGzip()                                                     // compress large payloads
+    ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current')); // AES-256-GCM
 
-$options = [
-  "cacheDir" => __DIR__  .  "/cache",
-];
+$cache = Cache::file(__DIR__ . '/cache', $pipeline);
 
-$Cacheer = new Cacheer($options, $formatted = true);
-
-$cacheKey = 'user_profile_1234';
-$userProfile = ['id' => 123, 'name' => 'John Doe'];
-
-Cacheer::putCache($cacheKey, $userProfile);
-$Cacheer->putCache($cacheKey, $userProfile);
-
-$cachedProfile = $Cacheer->getCache($cacheKey, $namespace, $ttl)->toString();
+$cache->set('token', 'sensitive-data');   // stored compressed + encrypted
+echo $cache->get('token');                // 'sensitive-data' — decrypted transparently
 ```
 
+- Encryption is **authenticated**: tampered or truncated data is rejected on read,
+  never returned. Requires `ext-openssl`.
+- Compression is **bounded**, so a crafted blob can't exhaust memory. Requires
+  `ext-zlib`.
+- Rotate keys by adding a new id and marking it active — old entries still decrypt.
+
+See the [Encryption & compression guide](../guides/encryption-and-compression.md).

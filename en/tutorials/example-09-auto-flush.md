@@ -1,26 +1,29 @@
-# Example 09 — Auto Flush with `flushAfter`
+# Pruning expired entries
+
+> v5 auto-flushed on a schedule as a side effect. v6 makes cleanup explicit:
+> expired entries are removed lazily on read, and in bulk with `prune()`.
+
+Stores that implement `PrunableStore` (all four built-ins) can sweep expired
+entries and report how many were removed.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Stores\FileStore;
 
-<?php
-require_once  __DIR__  .  "/../vendor/autoload.php";
-use Silviooosilva\\CacheerPhp\\Cacheer;
+$store = new FileStore(__DIR__ . '/cache');
+$cache = new Cache($store);
 
-$options = [
-  "cacheDir" => __DIR__  .  "/cache",
-  "flushAfter" => "1 week"
-];
+// ... time passes, entries expire ...
 
-$Cacheer = new Cacheer($options);
-
-$cacheKey = 'user_profile_1234';
-$userProfile = ['id' => 123, 'name' => 'John Doe'];
-
-Cacheer::putCache($cacheKey, $userProfile);
-$Cacheer->putCache($cacheKey, $userProfile);
-
-$cachedProfile = $Cacheer->getCache($cacheKey);
+$removed = $store->prune();  // number of expired entries deleted
 ```
 
-Accepted intervals for `flushAfter`: seconds, minutes, hours, days, weeks, months, years.
+Run it from the CLI on a cron instead of in your request path:
 
+```sh
+vendor/bin/cacheer prune --dry-run   # report what would be pruned
+vendor/bin/cacheer prune             # actually prune
+```
+
+Pruning only ever removes **expired** entries and never touches data outside the
+configured keyspace. See the [CLI guide](../guides/cli.md).

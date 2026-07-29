@@ -1,32 +1,37 @@
-# Exemplo 01 — Cache Simples de Dados
+# Cache simples de dados
+
+As quatro operações que você mais usará: guardar, ler, checar, apagar.
 
 ```php
-
 <?php
-require_once __DIR__ . "/../vendor/autoload.php";
+require __DIR__ . '/vendor/autoload.php';
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-$options = [
-    "cacheDir" =>  __DIR__ . "/cache",
-];
+$cache = Cache::file(__DIR__ . '/cache'); // ou Cache::inMemory()
 
-$Cacheer = new Cacheer($options);
+// Guardar — o TTL é opcional; null significa para sempre.
+$cache->set('user:123', ['id' => 123, 'name' => 'John Doe'], ttl: '10 minutes');
 
-$cacheKey = 'user_profile_1234';
-$userProfile = [
-    'id' => 123,
-    'name' => 'John Doe',
-    'email' => 'john.doe@example.com',
-];
+// Ler — retorna seu padrão num miss.
+$user = $cache->get('user:123', default: null);
+print_r($user);
 
-Cacheer::putCache($cacheKey, $userProfile);
-$Cacheer->putCache($cacheKey, $userProfile);
-
-$cachedProfile = $Cacheer->getCache($cacheKey);
-
-if ($Cacheer->has($cacheKey)) {
-    var_dump($cachedProfile);
+// Checar existência.
+if ($cache->has('user:123')) {
+    echo "cache hit\n";
 }
+
+// Apagar uma chave.
+$cache->delete('user:123');
 ```
 
+Notas:
+
+- `get()` retorna o valor diretamente, ou o `$default` num miss.
+- Qualquer valor serializável funciona — escalares, arrays e objetos. Veja
+  [Valores falsy e null](./exemplo-13-valores-falsy.md) para a única sutileza.
+- Troque `Cache::file(...)` por `Cache::inMemory()`, `Cache::redis(...)` ou
+  `Cache::database(...)` sem mudar o resto do seu código.
+
+Próximo: [Expiração personalizada (TTL)](./exemplo-02-tempo-expiracao-personalizado.md).

@@ -1,82 +1,34 @@
-# Example 16 — Monitor Integration *(v5.0.0)*
+# Tiered caching (L1/L2)
 
-Add real-time telemetry to an existing CacheerPHP project with a single command — no code changes required.
-
-## Install
-
-```bash
-composer require cacheerphp/monitor
-```
-
-The package self-registers via Composer's `autoload.files`. From this point on, every cache operation is instrumented automatically.
-
-## Existing Code — Unchanged
+Put a fast local store in front of a shared one. Reads hit local memory first and
+fall through to the network only on a miss; the value is promoted back to L1.
 
 ```php
-require 'vendor/autoload.php'; // bootstrap.php runs here — monitor is active
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Kernel\Ttl;
+use Silviooosilva\CacheerPhp\Stores\ArrayStore;
+use Silviooosilva\CacheerPhp\Stores\Support\PredisConnection;
+use Silviooosilva\CacheerPhp\Stores\RedisStore;
+use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-use Silviooosilva\CacheerPhp\Cacheer;
+$clock = new SystemClock();
+$l2 = new RedisStore(new PredisConnection(new Predis\Client()), 'app', clock: $clock);
 
-$cacheer = new Cacheer(['cacheDir' => __DIR__ . '/cache']);
-$cacheer->setDriver()->useFileDriver();
+$cache = Cache::tiered(
+    l1: new ArrayStore($clock),  // per-process, instant
+    l2: $l2,                     // shared across the fleet
+    l1MaxTtl: Ttl::seconds(10),  // cap how long a value may live locally
+);
 
-// All of these emit telemetry events automatically:
-$cacheer->putCache('user:1', ['name' => 'Alice']);
-$cacheer->getCache('user:1');           // → 'hit' event
-$cacheer->getCache('user:99');          // → 'miss' event
-$cacheer->increment('page_views');
-$cacheer->clearCache('user:1');
-$cacheer->flushCache();                 // → 'flush' event
-
-// Static facade also fires events:
-Cacheer::putCache('config:locale', 'en_US');
-Cacheer::getCache('config:locale');     // → 'hit' event
+$user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
+// first call: miss in both, computed, written to L2 + L1
+// next calls in this process: served from L1, no Redis round-trip
 ```
 
-## View the Dashboard
+- Writes and deletes go to **both** layers, so they can't drift.
+- A shared generation token keeps long-running workers coherent when another
+  worker invalidates L2.
+- Tiering optimizes **speed**, not availability — an L2 miss is a real miss. For
+  outages, see the [Resilient store](../guides/resilient-store.md).
 
-```bash
-vendor/bin/cacheer-monitor serve --port=9966
-# → http://127.0.0.1:9966
-```
-
-## Custom File Path
-
-If you need a custom events file, override after autoload:
-
-```php
-use Cacheer\Monitor\CacheerMonitorListener;
-use Cacheer\Monitor\Reporter\JsonlReporter;
-
-Cacheer::removeListeners();
-Cacheer::addListener(new CacheerMonitorListener(
-    new JsonlReporter('/var/log/myapp/events.jsonl')
-));
-```
-
-## Events Emitted
-
-| Operation | Event type |
-|---|---|
-| `getCache` (found) | `hit` |
-| `getCache` (not found) | `miss` |
-| `putCache` | `put` |
-| `putMany` | `put_many` |
-| `clearCache` | `clear` |
-| `flushCache` | `flush` |
-| `increment` / `decrement` | `increment` / `decrement` |
-| `add` | `add` |
-| `remember` / `rememberForever` | `remember` / `remember_forever` |
-| `forever` | `put_forever` |
-| `renewCache` | `renew` |
-| `tag` / `flushTag` | `tag` / `flush_tag` |
-| `has` | `has` |
-| `getAndForget` | `get_and_forget` |
-
-Each event includes: `key`, `namespace` (when non-empty), `driver`, `duration_ms`, and `success`.
-
-## See Also
-
-- [Cacheer Monitor — Quick Start](../cacheer-monitor/quick-start.md)
-- [Cacheer Monitor — REST API](../cacheer-monitor/api.md)
-- [Example 15 — Stats and Instance Management](./example-15-stats-instance.md)
+See the [Tiered caching guide](../guides/tiered-caching.md).

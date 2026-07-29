@@ -1,28 +1,31 @@
-# Example 04 — Namespaces
+# Scopes (namespaces)
+
+Scopes are isolated keyspaces. They replace v5's positional string namespaces.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-<?php
-require_once __DIR__ . "/../vendor/autoload.php";
+$cache = Cache::file(__DIR__ . '/cache');
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
+// The same key name is independent per scope.
+$cache->scope('app')->set('config', $appConfig);
+$cache->scope('api')->set('config', $apiConfig);
 
-$options = [
-    "cacheDir" =>  __DIR__ . "/cache",
-];
+$cache->scope('app')->get('config'); // $appConfig
+$cache->scope('api')->get('config'); // $apiConfig
+$cache->get('config');               // null — root is a different keyspace
 
-$Cacheer = new Cacheer($options);
-
-$namespace = 'session_data_01';
-$cacheKey = 'session_456';
-$sessionData = [
-    'user_id' => 456,
-    'login_time' => time(),
-];
-
-Cacheer::putCache($cacheKey, $sessionData, $namespace);
-$Cacheer->putCache($cacheKey, $sessionData, $namespace);
-
-$cachedSessionData = $Cacheer->getCache($cacheKey, $namespace);
+// Clear just one scope.
+$cache->scope('api')->clear();
 ```
 
+Scopes nest:
+
+```php
+$tenant = $cache->scope('tenant:42');
+$tenant->scope('reports')->set('daily', $rows);
+$tenant->clear(); // clears the tenant and everything under it
+```
+
+A `ScopedCache` has the same API as `Cache` — `set`, `get`, `remember`,
+`flexible`, batch, and `scope()` again. See the [Scopes guide](../guides/scopes.md).

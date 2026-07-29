@@ -1,82 +1,67 @@
-## API Reference — TimeBuilder
+# TTL & Clock
 
-TimeBuilder provides a fluid and chainable way of defining time periods in a more intuitive way and without typing errors. 
+> v5's `TimeBuilder` fluent API is replaced by the [`Ttl`](./option-builder.md#ttl)
+> value object and an injected `Clock`.
 
-It allows expirationTime and flushAfter values to be passed directly as integers or defined using chained methods such as day(1), week(2), etc.
+## Accepted TTL inputs
 
-TimeBuilder can be chained from File, Redis and Database builders to define values for `expirationTime()` and `flushAfter()`.
-
-#### Simple use (File)
-
-```php
-
-<?php
-OptionBuilder::forFile()
-    ->expirationTime('1 day')
-    ->build();
-```
-Or use TimeBuilder's chained approach:
+Anywhere a TTL is expected (`set`, `remember`, `setMany`, policies) you can pass:
 
 ```php
-
-<?php
-OptionBuilder::forFile()
-    ->expirationTime()->day(1)
-    ->build();
+$cache->set('k', $v, ttl: 3600);                        // int — seconds
+$cache->set('k', $v, ttl: '2 hours');                   // human string
+$cache->set('k', $v, ttl: new DateInterval('PT30M'));   // DateInterval
+$cache->set('k', $v, ttl: Ttl::minutes(30));            // Ttl object
+$cache->set('k', $v, ttl: null);                        // forever
+$cache->set('k', $v, ttl: 'forever');                   // forever (string)
 ```
 
-#### Use with Redis and Database
+Human strings match `<n> second|minute|hour|day|week` (singular or plural), plus
+the literal `forever`. A bare integer string (`'3600'`) is treated as seconds.
+Anything else throws `InvalidTtlException`.
+
+## The `Ttl` object
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-<?php
-// Redis default TTL of 10 minutes
-OptionBuilder::forRedis()
-  ->expirationTime()->minute(10)
-  ->build();
-
-// Database flush interval of 1 week
-OptionBuilder::forDatabase()
-  ->flushAfter()->week(1)
-  ->build();
+Ttl::seconds(30);   Ttl::minutes(10);   Ttl::hours(2);
+Ttl::days(7);       Ttl::weeks(2);      Ttl::forever();
+Ttl::until(new DateTimeImmutable('2026-01-01'), $clock);
 ```
 
-#### Available methods
+- `seconds()` (and its multiples) require a value **greater than zero** —
+  `InvalidTtlException` otherwise. There is no "zero TTL means delete" rule;
+  deletion is explicit.
+- Overflow is guarded: a duration or expiry that would exceed `PHP_INT_MAX`
+  throws rather than silently wrapping. Forever is represented as "no expiry",
+  not as a huge integer, so it does not depend on `PHP_INT_MAX` arithmetic.
 
-Each method allows you to set a specific time interval.
+## The `Clock`
 
-| Method        | Description                      | Example       |
-|--------------|--------------------------------|--------------|
-| `second($value)` | Set time in seconds  | `->second(30)` |
-| `minute($value)` | Set time in minutes  | `->minute(15)` |
-| `hour($value)`   | Set time in hours    | `->hour(3)`    |
-| `day($value)`    | Set time in days     | `->day(7)`     |
-| `week($value)`   | Set time in weeks    | `->week(2)`    |
-| `month($value)`  | Set time in months   | `->month(1)`   |
-| `year($value)`   | Set time in years    | `->year(1)`    |
-
-#### Full Example
+Every time read goes through a `Clock`, so behavior is deterministic and testable.
 
 ```php
+namespace Silviooosilva\CacheerPhp\Contracts;
 
-<?php
-$Options = OptionBuilder::forFile()
-    ->dir(__DIR__ . '/cache')
-    ->expirationTime()->week(1)
-    ->flushAfter()->minute(30)
-    ->build();
-
-var_dump($Options);
+interface Clock
+{
+    public function now(): int;          // unix seconds
+    public function nowFloat(): float;   // sub-second precision
+    public function sleep(int $microseconds): void;
+}
 ```
 
-**Expected Output**
+- **Production:** `Silviooosilva\CacheerPhp\Support\SystemClock`.
+- **Tests:** a fake clock you can advance by hand — no `sleep()` needed.
 
 ```php
-[
-    "cacheDir" => "/path/to/cache",
-    "expirationTime" => "1 week",
-    "flushAfter" => "30 minutes"
-]
+use Silviooosilva\CacheerPhp\Support\SystemClock;
+
+$cache = Cache::file('/var/cache', clock: new SystemClock());
 ```
 
-Now you can set expiration and flush times without having to remember exact strings. 🚀
+Because the clock is injected everywhere (stores, decorators, policies, locks,
+PSR adapters), you can freeze or fast-forward time in tests to hit exact expiry
+and stale-window boundaries. See the [Custom stores guide](../guides/custom-stores.md)
+for how a store must use the clock instead of `time()`.

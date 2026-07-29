@@ -1,31 +1,82 @@
 # Configuração
 
-O CacheerPHP carrega configurações de variáveis de ambiente usando [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv). Copie o arquivo `.env.example` para `.env` e ajuste os valores para o seu ambiente.
+O CacheerPHP 6 **não tem configuração ambiente**. Nunca carrega `.env`, nunca muda o
+timezone global e nunca cria um schema de banco por ter sido autoloadeado. Um
+`Cache` é exatamente, e apenas, o que você constrói.
 
-```sh
-cp .env.example .env
+## O caminho comum
+
+```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+
+$cache = Cache::inMemory();                 // ArrayStore — sem dependências
+$cache = Cache::file('/var/cache/app');     // FileStore — persistente, sem dependências
+$cache = Cache::database($pdo, 'cacheer');  // DatabaseStore — você é dono do PDO
+$cache = Cache::redis($connection);         // RedisStore — você é dono da conexão
 ```
 
-## Banco de dados
+É tudo que a maioria dos apps precisa. O resto abaixo é opcional.
 
-| Variável          | Descrição                                              | Padrão          |
-| ----------------- | ------------------------------------------------------ | ----------------|
-| `DB_CONNECTION`   | Driver do banco (`mysql`, `pgsql`, `sqlite`)          | `sqlite`        |
-| `DB_HOST`         | Host do banco                                         | `localhost`     |
-| `DB_PORT`         | Porta do banco                                        | `3306`          |
-| `DB_DATABASE`     | Nome do banco                                         | `cacheer_db`    |
-| `DB_USERNAME`     | Usuário do banco                                      | `root`          |
-| `DB_PASSWORD`     | Senha do banco                                        | (vazio)         |
-| `CACHEER_TABLE`   | Tabela para o driver de banco                         | `cacheer_table` |
+## Armazenando valores com segurança: `PipelineConfig`
 
-## Redis
+Stores persistentes codificam valores por um pipeline descrito com um
+[`PipelineConfig`](../api/configuracao.md) imutável:
 
-| Variável          | Descrição                                              | Padrão      |
-| ----------------- | ------------------------------------------------------ | ------------|
-| `REDIS_CLIENT`    | Cliente Redis (ex.: `predis`)                          | (vazio)     |
-| `REDIS_HOST`      | Host do Redis                                          | `localhost` |
-| `REDIS_PASSWORD`  | Senha do Redis                                         | (vazio)     |
-| `REDIS_PORT`      | Porta do Redis                                         | `6379`      |
-| `REDIS_NAMESPACE` | Namespace opcional para prefixar chaves               | (vazio)     |
+```php
+use Silviooosilva\CacheerPhp\Config\PipelineConfig;
+use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
 
-Essas variáveis são lidas na inicialização em `src/Boot/Configs.php`, permitindo ao CacheerPHP conectar-se aos backends preferidos.
+$pipeline = PipelineConfig::default()
+    ->withGzip()
+    ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current'))
+    ->withMaxValueBytes(2_000_000);
+
+$cache = Cache::file('/var/cache/app', $pipeline);
+```
+
+Veja [Criptografia e compressão](./criptografia-e-compressao.md) para detalhes.
+
+## Injetando um clock
+
+Todo construtor aceita um `Clock`. Produção usa `SystemClock`; testes injetam um
+clock falso para que expiração e janelas de stale sejam determinísticas sem
+`sleep()`.
+
+```php
+use Silviooosilva\CacheerPhp\Support\SystemClock;
+
+$cache = Cache::file('/var/cache/app', clock: new SystemClock());
+```
+
+## Injeção de dependências completa
+
+Quando precisar controlar tudo, construa `Cache` diretamente:
+
+```php
+$cache = new Cache(
+    store:    $store,        // qualquer Store
+    clock:    $clock,        // Clock
+    executor: $executor,     // DeferredExecutor — stale refresh após a resposta
+    events:   $dispatcher,   // EventDispatcher — observabilidade
+);
+```
+
+## Onde vai a configuração de ambiente?
+
+Na sua aplicação. Leia as variáveis de ambiente, construa um PDO ou conexão Redis, e
+passe-os. A biblioteca deliberadamente não faz isso por você, para que nada aconteça
+como efeito colateral do autoload. Um bootstrap pequeno basta:
+
+```php
+// bootstrap/cache.php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Stores\Support\PredisConnection;
+
+return Cache::redis(new PredisConnection(new Predis\Client([
+    'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
+    'port' => (int) ($_ENV['REDIS_PORT'] ?? 6379),
+])), prefix: $_ENV['CACHE_PREFIX'] ?? 'app');
+```
+
+A [CLI de operações](./cli.md) usa a mesma ideia: um `cacheer.config.php` que retorna
+uma store.

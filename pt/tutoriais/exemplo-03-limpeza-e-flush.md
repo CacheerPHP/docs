@@ -1,27 +1,29 @@
-# Exemplo 03 — Limpeza e Flush
+# Limpeza e flush
+
+Três níveis de remoção: uma chave, um escopo ou a store inteira.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-<?php
-require_once __DIR__ . "/../vendor/autoload.php";
+$cache = Cache::file(__DIR__ . '/cache');
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
+// Uma chave.
+$cache->delete('user:123');
 
-$options = [
-    "cacheDir" =>  __DIR__ . "/cache",
-];
+// Várias chaves de uma vez.
+$cache->deleteMany(['user:1', 'user:2', 'user:3']);
 
-$Cacheer = new Cacheer($options);
+// Apenas um escopo.
+$cache->scope('reports')->clear();
 
-Cacheer::flushCache();
-
-$cacheKey = 'user_profile_123';
-if ($Cacheer->clearCache($cacheKey)) {
-    echo $Cacheer->getMessage();
-}
-
-if ($Cacheer->flushCache()) {
-    echo $Cacheer->getMessage();
-}
+// O keyspace inteiro da store.
+$cache->clear();
 ```
 
+- `delete()` retorna `true` quando removeu algo.
+- `clear()` em um cache **com escopo** remove apenas aquele escopo; no cache raiz
+  esvazia a store inteira. Ele só toca no keyspace do próprio CacheerPHP.
+- Entradas expiradas são removidas preguiçosamente na leitura, e em massa com
+  [`prune()`](./exemplo-09-limpeza-automatica.md).
+
+Veja [Escopos](./exemplo-04-namespaces.md).

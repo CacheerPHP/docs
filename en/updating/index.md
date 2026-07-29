@@ -1,88 +1,137 @@
-# Updating CacheerPHP
+# Upgrading to CacheerPHP 6
 
-This guide walks you through upgrading CacheerPHP while keeping existing projects stable.
+CacheerPHP 6 is an instance-first rewrite. You can upgrade in one of two ways:
 
-## 1. Review the changelog
+1. **Bridge first, then modernize.** Swap your v5 object for the `LegacyCacheer`
+   bridge — it keeps the v5 method names — then move call sites to the `Cache` API
+   at your own pace.
+2. **Rewrite directly.** Replace call sites using the mapping below.
 
-Before changing dependencies, check:
+Either way, follow one path from installation to a passing test suite.
 
-- The release notes on GitHub
-- `CHANGELOG.md` inside the package
-- Breaking changes highlighted in pull requests
-
-## 2. Update the library
-
-```sh
-composer update silviooosilva/cacheer-php
-```
-
-If you pin versions in `composer.json`, bump the constraint first (for example `^2.4` → `^2.5`).
-
-After updating, clear Composer’s cache if you run into lock file conflicts:
+## 1. Install
 
 ```sh
-composer clear-cache
-rm composer.lock
-composer update
+composer require silviooosilva/cacheer-php:^6.0
 ```
 
-## 3. Run the test suite
+v6 requires PHP 8.3+. The core installs with no backend clients; `ArrayStore` and
+`FileStore` work out of the box. Redis and PDO drivers stay optional (Composer
+`suggest`).
 
-Always verify your project:
+## 2. Construction: driver selection becomes a named constructor
 
-- `composer test`
-- `composer lint`
-- `composer analyse`
+| v5 | v6 |
+|---|---|
+| `(new Cacheer())->setDriver()->useFileDriver()` | `Cache::file('/var/cache')` |
+| `->useDatabaseDriver()` | `Cache::database($pdo, 'cacheer')` |
+| `->useRedisDriver()` | `Cache::redis($connection)` |
+| array driver / tests | `Cache::inMemory()` |
 
-<!-- If your project uses the Monitor, replay the synthetic scenarios:
+The database schema is **never** created implicitly — run
+`DatabaseStoreSchema::migrate($pdo, $table)` (or `cacheer migrate`) once.
+
+## 3. Method mapping
+
+| v5 | v6 | Notes |
+|---|---|---|
+| `putCache($k, $v, $ns, $ttl)` | `set($k, $v, $ttl)` | Namespace becomes `scope($ns)->set(...)` |
+| `forever($k, $v)` | `set($k, $v, null)` | `null` TTL = forever |
+| `getCache($k, $ns, $ttl)` | `get($k)` | Read-time TTL removed |
+| `clearCache($k, $ns)` | `delete($k)` | `scope($ns)->delete(...)` |
+| `flushCache()` | `clear()` | Limited to the configured keyspace |
+| `getAndForget()` / `pull()` | `pull()` (bridge) | Atomicity reported by capability |
+| `has()` / `missing()` | `has()` | — |
+| positional namespace | `scope('name')` | Returns a scoped cache |
+| `tag($tag, ...$keys)` | `TaggableStore::tag()` | Capability, not core |
+| `increment()` / `decrement()` | `AtomicStore::increment()` | Capability, not core |
+| `isSuccess()` | `entry()->isHit()` or return value | Removed from core state |
+| `remember()` / `flexible()` | `remember()` / `flexible()` | Same intent, injected clock |
+
+### Automated renames (Rector)
+
+An optional Rector set ships at `rector.php` in the package. It renames the
+straightforward v5 methods on `Cacheer`/`LegacyCacheer`. It does **not** rewrite
+construction, move the namespace argument onto `scope()`, or drop the read-time
+TTL — do those by hand using the tables above.
 
 ```sh
-php cacheer-monitor/Tests/stress_test.php
-php cacheer-monitor/Tests/stress_io.php
-```
--->
-
-## 4. Refresh configuration & assets
-
-- Re-run your configuration scripts if new env vars were introduced
-- Clear cache directories (`rm -rf storage/cache` or similar)
-<!-- - Rebuild frontend bundles (if you bundle the monitor with your app) -->
-
-<!--
-## 5. Update Cacheer Monitor
-
-Inside `cacheer-monitor/`:
-
-```sh
-composer install
-php bin/cacheer-monitor serve --host=127.0.0.1 --port=9966
+composer require rector/rector --dev
+vendor/bin/rector process src --config vendor/silviooosilva/cacheer-php/rector.php --dry-run
 ```
 
-The Monitor CLI shares the same semantic version as the library; keep them aligned.
--->
+## 4. The compatibility bridge
 
-## 6. Verify integrations
+The bridge is a drop-in for the v5 surface on top of the v6 engine:
 
-- Applications using Redis: ensure new commands are available
-- Framework integrations: run feature tests (Laravel, Symfony, etc.)
-- Custom reporters: re-run logging and queue pipelines
+```php
+use Silviooosilva\CacheerPhp\Compat\LegacyCacheer;
 
-## 7. Rollback plan
-
-Keep the previous lock file and vendor directory until you are confident the new version works. If something fails:
-
-```sh
-git checkout composer.json composer.lock
-composer install
+$cache = LegacyCacheer::file('/var/cache');   // or ::inMemory()
+$cache->putCache('user:1', $user, 'accounts', 3600);
+$user = $cache->getCache('user:1', 'accounts');
 ```
 
-## 8. Report issues
+Enable deprecations in development to locate call sites to migrate — they are
+**silent by default** so production logs stay clean:
 
-If you hit problems, open an issue with:
+```php
+$cache = LegacyCacheer::file('/var/cache', emitDeprecations: true);
+```
 
-- Version before and after
-- OS/PHP version
-- Stack trace or failing test case
-- Steps to reproduce
+The bridge also exposes `forever`, `has`, `missing`, `pull`/`getAndForget`,
+`renewCache`, `increment`/`decrement`, `remember`/`rememberForever`, `tag`/
+`flushTag`, `appendCache`, and `isSuccess`/`getMessage`.
 
-Up-to-date projects benefit from the latest optimisations and security patches—thanks for keeping CacheerPHP current!
+## 5. Data compatibility and rewrite-on-read
+
+v6 writes an authenticated, versioned envelope but can still **read** values
+written by v5. Construct the store's pipeline with a `V5PayloadReader` matching the
+compression/encryption your v5 app used (v5 payloads are not self-describing), and
+opt into rewrite-on-read to re-encode legacy values in the v6 envelope on read:
+
+```php
+use Silviooosilva\CacheerPhp\Config\PipelineConfig;
+use Silviooosilva\CacheerPhp\Storage\Compat\V5PayloadReader;
+use Silviooosilva\CacheerPhp\Stores\FileStore;
+
+$pipeline = PipelineConfig::default()->withV5Reader(new V5PayloadReader(compression: true));
+$store = new FileStore('/var/cache', $pipeline->codec(), migrateLegacyOnRead: true);
+```
+
+- v5's AES-256-**CBC** payloads are unauthenticated; a wrong key or tampering
+  surfaces only as a failed `unserialize`, never cryptographically. New writes
+  always use the authenticated v6 envelope.
+- `FileStore` and `DatabaseStore` support rewrite-on-read; Redis entries migrate on
+  their next write (legacy reads keep working until then).
+
+## 6. Database migration and rollback
+
+```php
+use Silviooosilva\CacheerPhp\Stores\Support\DatabaseStoreSchema;
+
+DatabaseStoreSchema::migrate($pdo, 'cacheer'); // idempotent
+DatabaseStoreSchema::drop($pdo, 'cacheer');    // rollback = drop (cache is derived data)
+```
+
+Preview the DDL without executing: `cacheer migrate --dry-run`.
+
+## 7. Verify
+
+- `composer test`, `composer lint`, `composer analyse`
+- Re-run your feature tests (framework integrations, Redis command availability)
+
+## 8. Rollback plan
+
+Rewrite-on-read is opt-in, so a read-only rollout never mutates v5 data. To fall
+back: pin `^5.2` again, keep the previous lock file/vendor directory, and clear any
+v6-only envelopes (`cacheer clear --force`).
+
+## Support window
+
+- **v6** is the actively developed line.
+- **v5** receives security and correctness fixes only for 12 months after the 6.0
+  stable release.
+
+> Upgrading from **v4**? First follow the [v5 migration guide](./v5-migration.md),
+> then this one.

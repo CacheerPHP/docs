@@ -1,96 +1,77 @@
 # Guia de Contribuição
 
-Obrigado por ajudar a evoluir o CacheerPHP! Este guia explica como preparar o ambiente, seguir as convenções do projeto e enviar contribuições sem dor de cabeça.
+Obrigado por ajudar a melhorar o CacheerPHP. Esta página cobre o fluxo de
+desenvolvimento da v6. Para a política completa, veja `CONTRIBUTING.md`,
+`SECURITY.md` e o `ROADMAP.md` no repositório do pacote.
 
-## Pré-requisitos
-
-- PHP 8.1 ou superior
-- Composer 2+
-- Redis (opcional) para testar recursos específicos
-- Node.js/npm caso vá mexer nos assets do site de documentação
-
-## Estrutura do repositório
-
-```
-CacheerPHP-Org/
-├── CacheerPHP/            # Biblioteca principal
-│   ├── src/
-│   ├── tests/
-│   └── ...
-├── cacheerphp.github.io/  # Site publicado (gerado a partir de /docs)
-└── docs/                  # Markdown fonte (inglês e português)
-```
-
-**Importante**: atualize a documentação na pasta `/docs`. O site (`cacheerphp.github.io/resources/docs`) é derivado desse conteúdo.
-
-## Preparando o ambiente
+## Setup
 
 ```sh
-# Clone o monorepo (contém biblioteca e docs)
-git clone https://github.com/silviooosilva/CacheerPHP-Org.git
-cd CacheerPHP-Org/CacheerPHP
-
-# Instalar dependências PHP
+git clone https://github.com/silviooosilva/CacheerPHP
+cd CacheerPHP
 composer install
-
-# Executar testes
-composer test
-
-# Opcional: análise estática e lint
-composer lint
-composer analyse
 ```
 
-<!--
-## Rodando o monitor (opcional)
+Requer PHP 8.3+. O núcleo não tem extensões obrigatórias; instale `pdo_sqlite`,
+`openssl` e `zlib` para rodar a suíte local completa, e `predis/predis` para Redis.
+
+## Suítes de teste
+
+Os testes usam [Pest](https://pestphp.com/) e são separados por área:
 
 ```sh
-cd cacheer-monitor
-composer install
-php bin/cacheer-monitor serve --host=127.0.0.1 --port=9966
+composer test            # suíte unitária sem serviços (padrão)
+composer test:kernel     # núcleo v6 (Cache, adaptadores, CLI, rehearsals)
+composer test:contract   # conformidade das stores (Array, File)
+composer test:storage    # pipeline de armazenamento / envelope
+composer test:concurrency  # harnesses de contenção de locks e contadores
+composer test:integration  # Redis / banco (requer serviços)
+composer test:all        # tudo
 ```
 
-Use `CACHEER_MONITOR_EVENTS` para controlar o JSONL monitorado.
--->
+Data providers devem usar a forma de atributo, não a anotação:
 
-## Branches e commits
+```php
+#[\PHPUnit\Framework\Attributes\DataProvider('cases')]
+```
 
-- Crie uma branch específica (`feat/...`, `fix/...`, etc.).
-- Commits curtos, com mensagens no imperativo (`feat: adiciona gerente redis`).
-- Rebase com o `main`/`master` antes de abrir o PR.
+## Análise estática e estilo
 
-## Checklist de testes
+```sh
+composer analyse   # PHPStan nível 5, sem supressões
+composer lint      # php-cs-fixer (dry-run)
+composer fix       # php-cs-fixer (aplica)
+```
 
-- `composer test`
-- `composer lint`
-- `composer analyse`
-<!-- - Scripts relevantes do monitor (ex.: `php Tests/stress_io.php`) quando mexer em agregação/reporters -->
+## Tempo determinístico
 
-## Atualizando documentação
+Nunca chame `time()` ou `sleep()` em testes ou no código de uma store. O tempo
+passa por um `Clock` injetado; os testes avançam um `FakeClock`. Isso mantém a
+suíte rápida e o comportamento de expiração/stale exato.
 
-- Conteúdo em inglês → `docs/en/...`
-- Traduções em português → `docs/pt/...`
-- Se só existir uma língua, adicione links cruzados
-- Inclua novos tópicos no `index.md` correspondente
+## Adicionando uma store
 
-## Enviando Pull Request
+Implemente o contrato `Store`, adicione apenas as capacidades que você garante e
+comprove estendendo `Tests\Support\StoreConformance`. Veja o
+[guia de stores personalizadas](../guias/stores-personalizadas.md). Uma store nunca
+deve varrer ou limpar dados fora do seu keyspace configurado.
 
-1. Faça push da branch para seu fork.
-2. Abra PR contra `silviooosilva/CacheerPHP` (ou repositório apropriado).
-3. Preencha o template: descrição, testes executados, evidências se houver UI.
-4. Responda aos feedbacks; faça squash ou rebase quando solicitado.
+## Portões de qualidade de um pull request
 
-## Convenções de código
+- Mapeia para um item do roadmap (e um RFC aceito, para mudanças substanciais).
+- Comportamento público tem testes unitários ou de contrato; comportamento
+  específico de driver tem testes de integração; alegações de concorrência têm
+  testes de contenção.
+- Nova configuração é tipada e documentada; novos eventos carregam apenas metadados
+  (nunca valores).
+- Sem efeitos colaterais ocultos de filesystem, ambiente, timezone, schema ou rede.
+- `composer analyse` e `composer lint` passam.
+- Exemplos e notas de migração relevantes são atualizados.
+- Mudanças sensíveis a performance incluem evidência de benchmark antes/depois.
 
-- PSR-12 como base, salvo quando o arquivo já segue uma variante
-- Use `declare(strict_types=1);` e tipagem sempre que possível
-- Evite novas dependências sem discutir via issue
-<!-- - No monitor (frontend), mantenha utilitários Tailwind e evite estilos inline -->
+## Reportando
 
-## Reportando issues
-
-- Use o GitHub Issues
-- Especifique ambiente, passos de reprodução, comportamento esperado vs observado
-<!-- - Anexe logs, stack trace ou amostras JSONL se o problema envolver o monitor -->
-
-Obrigado por fortalecer o CacheerPHP!
+- **Bugs / features:** use os templates de issue do repositório.
+- **Segurança:** não abra uma issue pública — siga o `SECURITY.md`.
+- **Mudanças substanciais:** abra um RFC primeiro para acordar o design antes do
+  código.

@@ -1,118 +1,32 @@
-# Exemplo 10 — Tagging e Invalidação por Tag
+# Tagging
 
-Este exemplo mostra como associar chaves a tags e invalidá-las em lote em todos os drivers. Você pode usar chaves simples (sem namespace) ou chaves com namespace no formato `namespace:key`.
-
-### Driver de Arquivos
+Tags são rótulos transversais: uma entrada pode ter muitas tags, e você invalida um
+grupo inteiro de uma vez. Tagging é uma capacidade da store (`TaggableStore`), então
+você a acessa pela store.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Kernel\Key;
+use Silviooosilva\CacheerPhp\Stores\FileStore;
 
-<?php
-require __DIR__ . '/../vendor/autoload.php';
+$store = new FileStore(__DIR__ . '/cache');
+$cache = new Cache($store);
 
-use Silviooosilva\\CacheerPhp\\Cacheer;
+$cache->set('product:1', $p1);
+$cache->set('product:2', $p2);
 
-$cacheDir = __DIR__ . '/../.cache';
+// Associe chaves já armazenadas a uma tag.
+$store->tag(Key::named('product:1'), 'products', 'catalog');
+$store->tag(Key::named('product:2'), 'products');
 
-$cache = new Cacheer([
-    'drive'    => 'file',
-    'cacheDir' => $cacheDir,
-]);
-
-// Armazenar valores
-$cache->putCache('user:1', ['id' => 1, 'name' => 'Ana']);
-$cache->putCache('user:2', ['id' => 2, 'name' => 'Bruno']);
-
-// Tag sem namespace explícito
-$cache->tag('users', 'user:1', 'user:2');
-
-// Chaves com namespace
-$cache->putCache('profile', ['bio' => 'Hi'], 'nsA');
-$cache->putCache('settings', ['lang' => 'pt'], 'nsA');
-$cache->tag('ns-group', 'nsA:profile', 'nsA:settings');
-
-// Invalidar pela tag
-$cache->flushTag('users');     // remove user:1 e user:2
-$cache->flushTag('ns-group');  // remove nsA:profile e nsA:settings
-
+// Invalide tudo com a tag "products".
+$removed = $store->clearTag('products'); // número de entradas removidas
 ```
 
 Notas:
-- O índice de tags é salvo em `cacheDir/_tags/{tag}.json` e removido no `flushTag`.
 
-### Driver Redis
-
-```php
-
-<?php
-require __DIR__ . '/../vendor/autoload.php';
-
-use Silviooosilva\\CacheerPhp\\Cacheer;
-
-$cache = new Cacheer();
-$cache->setDriver()->useRedisDriver();
-
-$cache->putCache('order:10', ['id' => 10]);
-$cache->putCache('order:11', ['id' => 11]);
-$cache->tag('orders', 'order:10', 'order:11');
-
-// com namespace
-$cache->putCache('summary', ['c' => 2], 'nsB');
-$cache->tag('reports', 'nsB:summary');
-
-$cache->flushTag('orders');  // limpa order:10, order:11
-$cache->flushTag('reports'); // limpa nsB:summary
-```
-
-Notas:
-- Usa um Set do Redis `tag:{tag}` para indexar membros; o set é removido no `flushTag`.
-
-### Driver de Banco de Dados (MySQL/SQLite/PgSQL)
-
-```php
-
-<?php
-require __DIR__ . '/../vendor/autoload.php';
-
-use Silviooosilva\\CacheerPhp\\Cacheer;
-use Silviooosilva\\CacheerPhp\\Core\\Connect;
-
-$cache = new Cacheer();
-$cache->setConfig()->setDatabaseConnection(Connect::getConnection());
-$cache->setDriver()->useDatabaseDriver();
-
-$cache->putCache('p:1', ['id' => 1]);
-$cache->putCache('p:2', ['id' => 2]);
-$cache->tag('products', 'p:1', 'p:2');
-
-// com namespace
-$cache->putCache('view', ['ct' => 5], 'nsC');
-$cache->tag('analytics', 'nsC:view');
-
-$cache->flushTag('products');
-$cache->flushTag('analytics');
-```
-
-Notas:
-- O índice é armazenado na mesma tabela usando o namespace reservado `__tags__` e a chave `tag:{tag}`. É removido no `flushTag`.
-
-### Driver Array (memória)
-
-```php
-
-<?php
-require __DIR__ . '/../vendor/autoload.php';
-
-use Silviooosilva\\CacheerPhp\\Cacheer;
-
-$cache = new Cacheer();
-$cache->setDriver()->useArrayDriver();
-
-$cache->putCache('x', 1);
-$cache->putCache('y', 2);
-$cache->tag('simple', 'x', 'y');
-$cache->flushTag('simple');
-```
-
-Notas:
-- O índice de tags fica em memória e é reiniciado no `flushCache()`.
-
+- Tagging associa chaves **existentes** a uma tag; guarde o valor primeiro.
+- Índices de tag são metadados best-effort: uma chave que expira antes de a tag ser
+  limpa é simplesmente um no-op.
+- Para separação estrutural (funcionalidades, tenants), prefira
+  [escopos](./exemplo-04-namespaces.md); use tags para relações que cruzam escopos.

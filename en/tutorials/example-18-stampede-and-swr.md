@@ -1,65 +1,50 @@
-# Example 18 — Stampede Protection & Stale-While-Revalidate
+# Stampede protection & stale-while-revalidate
 
-*New in v5.2.0*
+Two tools for hot keys: `remember()` prevents a dogpile; `flexible()` keeps
+responses instant while data refreshes in the background.
 
-When a popular cache key expires, every in-flight request misses at once and they all run the expensive callback together — a *cache stampede* (or "dogpile"). CacheerPHP now prevents that, and adds a stale-while-revalidate mode so reads rarely block on recomputation at all.
+## Single-flight `remember()`
 
-## Stampede-safe `remember()`
-
-`remember()` is unchanged to call — the protection is automatic. On a miss, one request computes under a single-flight lock while the others wait and then read the freshly-stored value.
+When many requests miss the same key at once, only one computes; the rest wait and
+read its result.
 
 ```php
-<?php
-require_once __DIR__ . '/../vendor/autoload.php';
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-use Silviooosilva\CacheerPhp\Cacheer;
+$cache = Cache::file(__DIR__ . '/cache');
 
-$cache = new Cacheer();
-$cache->setDriver()->useFileDriver();
-
-// Even if 100 requests hit this simultaneously on a cold key,
-// computeExpensiveStats() runs exactly once.
-$stats = $cache->remember('dashboard:stats', 300, function () {
-    return computeExpensiveStats(); // slow query, API call, etc.
+$value = $cache->remember('expensive', ttl: '5 minutes', callback: function () {
+    return run_expensive_query(); // runs once across concurrent workers
 });
 ```
 
-This works on any lockable driver (File, Database, Redis). It also applies to the fluent namespace context:
+This needs a store that can lock (all four built-ins). Without one, `remember()`
+still works but isn't stampede-proof.
+
+## `flexible()` — stale-while-revalidate
+
+Serve fresh data directly; once it ages past `fresh`, serve the **stale** value
+instantly and refresh it once in the background; past `stale`, recompute.
 
 ```php
-$report = $cache->in('reports')->remember('latest', 600, fn () => buildReport());
+$feed = $cache->flexible('home:feed', fresh: 30, stale: 300, callback: fn () => build_feed());
 ```
 
-## Stale-While-Revalidate with `flexible()`
+| Age | Behavior |
+|---|---|
+| 0–30s | serve cached value |
+| 30–300s | serve stale immediately + one background refresh |
+| >300s | recompute synchronously |
 
-`flexible()` keeps serving a cached value past its *fresh* horizon while a single worker refreshes it in the background, only blocking once the value is older than the *stale* horizon.
+The refresh runs through the deferred executor. Use
+`AfterResponseDeferredExecutor` so the user waits for neither the read nor the
+refresh:
 
 ```php
-// Fresh for 60s; serve-stale-and-refresh for up to 10 minutes.
-$html = $cache->flexible('home', fresh: 60, stale: 600, function () {
-    return renderHomepage();
-});
+use Silviooosilva\CacheerPhp\Support\AfterResponseDeferredExecutor;
+
+$cache = new Cache($store, executor: new AfterResponseDeferredExecutor());
 ```
 
-Lifecycle for a given key:
-
-| Age of value | Behaviour |
-|--------------|-----------|
-| `< 60s` (fresh) | Served directly. |
-| `60s – 600s` (stale) | Served immediately; one request recomputes in the background. |
-| `> 600s` (expired) | Recomputed under a single-flight lock. |
-
-The request that wins the refresh lock recomputes inline and returns the fresh value; everyone else in the stale window gets the cached value instantly. The callback never runs more than once at a time.
-
-## Choosing between them
-
-| Use | When |
-|-----|------|
-| `remember()` | You always want a value no older than the TTL, and can tolerate one request blocking on a miss. |
-| `flexible()` | You'd rather serve a slightly stale value than ever block readers — dashboards, homepages, expensive aggregations. |
-
-## See also
-
-- [Cache Functions → remember()](../api/cache-functions.md#remember--get-or-compute-with-ttl)
-- [Cache Functions → flexible()](../api/cache-functions.md#flexible--stale-while-revalidate)
-- [Distributed Locks](../api/locks.md)
+See [Remember & locks](../guides/remember-and-locks.md) and
+[Stale-while-revalidate](../guides/stale-while-revalidate.md).

@@ -1,23 +1,28 @@
-# Exemplo 07 — Saída Array
+# Operações em lote
+
+Leia, grave e apague muitas chaves de uma vez. Em stores que implementam `BatchStore`
+(as quatro nativas), essas operações usam uma operação multi-chave nativa ou uma
+transação em vez de um loop.
 
 ```php
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-<?php
-require_once  __DIR__  .  "/../vendor/autoload.php";
-use Silviooosilva\\CacheerPhp\\Cacheer;
+$cache = Cache::file(__DIR__ . '/cache');
 
-$options = [
-  "cacheDir" => __DIR__  .  "/cache",
-];
+// Grave várias sob um TTL (as chaves devem ser strings).
+$cache->setMany([
+    'user:1' => $u1,
+    'user:2' => $u2,
+    'user:3' => $u3,
+], ttl: '10 minutes');
 
-$Cacheer = new Cacheer($options, $formatted = true);
+// Leia várias — misses retornam o padrão.
+$users = $cache->many(['user:1', 'user:2', 'user:99'], default: null);
+// ['user:1' => $u1, 'user:2' => $u2, 'user:99' => null]
 
-$cacheKey = 'user_profile_1234';
-$userProfile = ['id' => 123, 'name' => 'John Doe'];
-
-Cacheer::putCache($cacheKey, $userProfile);
-$Cacheer->putCache($cacheKey, $userProfile);
-
-$cachedProfile = $Cacheer->getCache($cacheKey, $namespace, $ttl)->toArray();
+// Apague várias — true só se removeu todas.
+$cache->deleteMany(['user:1', 'user:2']);
 ```
 
+Operações em lote respeitam o escopo atual, então
+`$cache->scope('reports')->many([...])` lê dentro de `reports`.

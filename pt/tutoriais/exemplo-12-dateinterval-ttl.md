@@ -1,70 +1,30 @@
-# Exemplo 12 — DateInterval e TTL null
+# TTL com DateInterval
 
-*Novo na v5.0.0*
-
-Todos os parâmetros de TTL aceitam agora quatro formatos: `int` (segundos), `string` (legível), `\DateInterval` e `null` (para sempre).
-
-## TTL com DateInterval
-
-Use o `\DateInterval` nativo do PHP para TTLs tipados e amigáveis para o IDE:
+Qualquer argumento de TTL aceita um `DateInterval` nativo do PHP.
 
 ```php
-<?php
-require_once __DIR__ . '/../vendor/autoload.php';
+use Silviooosilva\CacheerPhp\Kernel\Cache;
 
-use Silviooosilva\CacheerPhp\Cacheer;
+$cache = Cache::inMemory();
 
-$cache = new Cacheer();
-$cache->setDriver()->useArrayDriver();
+$cache->set('a', $v, ttl: new DateInterval('PT30M'));   // 30 minutos
+$cache->set('b', $v, ttl: new DateInterval('P1D'));     // 1 dia
+$cache->set('c', $v, ttl: new DateInterval('PT1H30M')); // 90 minutos
 
-// 45 minutos
-$cache->putCache('session', $data, ttl: new DateInterval('PT45M'));
-
-// 1 dia
-$cache->putCache('report', $data, ttl: new DateInterval('P1D'));
-
-// 2 horas e 30 minutos
-$cache->putCache('token', $data, ttl: new DateInterval('PT2H30M'));
+$cache->remember('d', new DateInterval('PT10M'), fn () => compute());
 ```
 
-## TTL null — Guardar Para Sempre
+Regras:
 
-Passar `null` guarda o item sem expiração (`PHP_INT_MAX` segundos):
+- Intervalos com anos ou meses são rejeitados (a duração é ambígua) — use
+  dias/horas/minutos/segundos. Um intervalo negativo também é rejeitado.
+- Fixe uma expiração absoluta com `Ttl::until()`:
 
-```php
-$cache->putCache('app_version', 'v5.0.0', ttl: null);
-```
+  ```php
+  use Silviooosilva\CacheerPhp\Kernel\Ttl;
+  use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-## Funciona em Todo o Lado
+  $cache->set('sale', $v, ttl: Ttl::until(new DateTimeImmutable('2026-12-31'), new SystemClock()));
+  ```
 
-`\DateInterval` e `null` são aceites por todos os métodos que recebem TTL:
-
-```php
-// putCache
-$cache->putCache('key', 'data', ttl: new DateInterval('PT30M'));
-
-// add (escrita condicional)
-$cache->add('lock', getmypid(), ttl: new DateInterval('PT1M'));
-
-// remember (obter-ou-calcular)
-$cache->remember('stats', new DateInterval('PT5M'), fn() => computeStats());
-
-// renewCache (renovar TTL)
-$cache->renewCache('key', new DateInterval('PT2H'));
-```
-
-## Comparação de Todos os Formatos
-
-```php
-// Inteiro — segundos
-$cache->putCache('k', 'v', ttl: 3600);
-
-// String — legível
-$cache->putCache('k', 'v', ttl: '2 hours');
-
-// DateInterval — nativo do PHP
-$cache->putCache('k', 'v', ttl: new DateInterval('PT2H'));
-
-// null — para sempre
-$cache->putCache('k', 'v', ttl: null);
-```
+Veja [TTL e Clock](../api/construtor-de-tempo.md).

@@ -1,35 +1,46 @@
 # API Reference
 
-Complete reference for all CacheerPHP v5.2.0 public classes and methods.
+Complete reference for the CacheerPHP 6.x public API. v6 is instance-first: a
+small `Cache` kernel over a minimal `Store` contract, with optional capabilities
+and composable decorators.
 
 ## Core
 
 | Page | Description |
 |------|-------------|
-| [Overview](./overview.md) | Architecture summary and class map |
-| [Cache Functions](./cache-functions.md) | `getCache`, `putCache`, `has`, `remember`, `add`, `tag`, `stats`, and more |
-| [Configuration: `setConfig()`](./config.md) | Timezone, database connection, logger path |
-| [Drivers: `setDriver()`](./drivers.md) | File, Database, Redis, and Array backends |
+| [Overview](./overview.md) | Architecture, namespaces, and how the pieces fit |
+| [Cache & ScopedCache](./cache-functions.md) | `get`, `set`, `remember`, `flexible`, `scope`, batch, and named constructors |
+| [Value objects](./option-builder.md) | `Key`, `Scope`, `Ttl`, `CacheEntry` |
+| [TTL & Clock](./time-builder.md) | TTL inputs, forever, and the injected `Clock` |
 
-## Configuration Helpers
-
-| Page | Description |
-|------|-------------|
-| [OptionBuilder](./option-builder.md) | Fluent builder for File, Redis, and Database options |
-| [TimeBuilder](./time-builder.md) | Chainable time interval helpers |
-
-## Features
+## Stores
 
 | Page | Description |
 |------|-------------|
-| [Compression & Encryption](./compression-encryption.md) | gzip compression and AES-256-CBC encryption |
-| [PSR-16 Adapter](./psr16-adapter.md) | `Psr16CacheAdapter` — standard SimpleCache interface *(new in v5)* |
-| [Distributed Locks](./locks.md) | `lock()` — a named, driver-backed mutex *(new in v5.2.0)* |
+| [Stores & capabilities](./drivers.md) | The `Store` contract, capability interfaces, built-in stores, and decorators |
+| [Configuration](./config.md) | Named constructors and the `PipelineConfig` storage pipeline |
+| [Compression & encryption](./compression-encryption.md) | The envelope, gzip, and authenticated AES-256-GCM |
+| [Locks](./locks.md) | `LockingStore`, `Lock`, and single-flight coordination |
 
-## Notes
+## Interop
 
-- `expirationTime` acts as a default TTL when you omit TTL in `putCache()` (or pass the implicit `3600`). Explicit TTL values other than `3600` override the default.
-- `flushAfter` enables an auto-flush check on store initialization; if the interval has elapsed the store will call `flushCache()`.
-- All TTL parameters now accept `int`, `string`, `\DateInterval`, or `null` *(new in v5)*.
-- v5.1.0 adds convenience aliases (`forget`, `pull`, `missing`), a fluent namespace context (`in()` / `namespace()` / `withoutNamespace()`), simple-form `putMany()`, and optional `$default` / `$ttl` for `increment()` / `decrement()`. See [Cache Functions → v5.1.0 Additions](./cache-functions.md#v510-additions-backwards-compatible).
-- v5.2.0 adds [distributed locks](./locks.md) (`lock()`, on every driver), makes `increment()` / `decrement()` **atomic**, makes `remember()` **stampede-safe**, and adds `flexible()` for **stale-while-revalidate**. See [Cache Functions → v5.2.0 Additions](./cache-functions.md#v520-additions-backwards-compatible).
+| Page | Description |
+|------|-------------|
+| [PSR-16 & PSR-6 adapters](./psr16-adapter.md) | `Psr16Cache`, `Psr6Pool`, `Psr6Item` |
+
+## Conventions
+
+- **Instance-first.** There is no global state. Construct a `Cache` and pass it
+  where you need it.
+- **Keys are strings or `Key` objects.** Every method that takes a key accepts
+  both; a bare string is wrapped as `Key::named($string)`.
+- **Time is injected.** Every constructor accepts an optional `Clock`; the
+  default is `SystemClock`. Tests use `FakeClock`.
+- **Capabilities are checked, never faked.** Calling a capability a store does not
+  implement throws `UnsupportedCapabilityException` instead of degrading silently.
+- **Values round-trip losslessly**, including `null`, `false`, `0`, `''`, and
+  `[]`. A cached `null` is a hit, not a miss — use `Cache::entry()` to tell them
+  apart.
+
+See also the [migration guide](../updating/index.md) and the runnable, CI-tested
+examples in the package's `examples/v6` directory.

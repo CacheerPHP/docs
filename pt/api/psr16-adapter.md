@@ -1,7 +1,7 @@
 # Adaptadores PSR-16 e PSR-6
 
 O CacheerPHP 6 traz adaptadores para os dois PSRs de cache sobre o mesmo núcleo
-`Cache`, para você entregar um cache padronizado a qualquer biblioteca
+`Cacheer`, para você entregar um cache padronizado a qualquer biblioteca
 interoperável.
 
 ## PSR-16 — `Psr16Cache`
@@ -10,10 +10,10 @@ interoperável.
 `Psr\SimpleCache\CacheInterface`.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Psr\Psr16Cache;
 
-$psr16 = new Psr16Cache(Cache::file('/var/cache/app'));
+$psr16 = new Psr16Cache(Cacheer::file('/var/cache/app'));
 
 $psr16->set('token', 'abc123', 1800);        // ttl: int segundos, DateInterval ou null
 $psr16->get('token');                         // 'abc123'
@@ -38,13 +38,13 @@ Detalhes de spec honrados:
 
 `Silviooosilva\CacheerPhp\Psr\Psr6Pool` implementa
 `Psr\Cache\CacheItemPoolInterface`; os itens são `Psr6Item`. O pool recebe um
-`Cache` e um `Clock`.
+`Cacheer` e um `Clock`.
 
 ```php
 use Silviooosilva\CacheerPhp\Psr\Psr6Pool;
 use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-$pool = new Psr6Pool(Cache::file('/var/cache/app'), new SystemClock());
+$pool = new Psr6Pool(Cacheer::file('/var/cache/app'), new SystemClock());
 
 $item = $pool->getItem('user:42');
 if (! $item->isHit()) {
@@ -66,5 +66,5 @@ contra o clock injetado, então a expiração PSR-6 é determinística sob um `F
 
 - Use **PSR-16** para cache chave/valor direto e o maior suporte de bibliotecas.
 - Use **PSR-6** quando uma biblioteca exigir o modelo pool/item ou commits deferidos.
-- Use a API nativa [`Cache`](./funcoes-cache.md) para escopos, `remember()`,
+- Use a API nativa [`Cacheer`](./funcoes-cache.md) para escopos, `remember()`,
   `flexible()`, políticas, camadas e resiliência — recursos que os PSRs não cobrem.

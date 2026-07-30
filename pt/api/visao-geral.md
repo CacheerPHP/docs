@@ -1,13 +1,13 @@
 # Visão geral da arquitetura
 
 O CacheerPHP 6 é construído a partir de peças pequenas e componíveis. Você
-interage com um núcleo `Cache`; ele delega a uma `Store`; decorators opcionais
+interage com um núcleo `Cacheer`; ele delega a uma `Store`; decorators opcionais
 adicionam camadas, resiliência e instrumentação; e um pipeline de armazenamento
 transforma valores em um envelope seguro e versionado.
 
 ```text
 API pública
-  Cache / ScopedCache / PolicyCache
+  Cacheer / ScopedCacheer / PolicyCacheer
           |
 Objetos de valor do núcleo
   Key / Scope / Ttl / CacheEntry / Clock
@@ -29,7 +29,7 @@ Pipeline de armazenamento
 
 | Namespace | Conteúdo |
 |---|---|
-| `Kernel\` | `Cache`, `ScopedCache`, `PolicyCache` e os objetos de valor `Key`, `Scope`, `Ttl`, `CacheEntry` |
+| `Kernel\` | `Cacheer`, `ScopedCacheer`, `PolicyCacheer` e os objetos de valor `Key`, `Scope`, `Ttl`, `CacheEntry` |
 | `Contracts\` | `Store` e as interfaces de capacidade (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`), além de `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
 | `Stores\` | `ArrayStore`, `FileStore`, `DatabaseStore`, `RedisStore` e os decorators `TieredStore`, `ResilientStore`, `InstrumentedStore` |
 | `Storage\` | `Envelope`, `EnvelopeCodec`, serializers, compressão, criptografia, codificação de chave e o leitor v5 |
@@ -38,7 +38,6 @@ Pipeline de armazenamento
 | `Observability\` | `CacheEvent`, `CacheEventType`, `EventBus`, `MetricsCollector`, pontes PSR-3/PSR-14 |
 | `Psr\` | `Psr16Cache`, `Psr6Pool`, `Psr6Item` |
 | `Console\` | a CLI de operações `cacheer` |
-| `Compat\` | `LegacyCacheer` — a ponte v5 |
 
 ## O contrato Store mínimo
 
@@ -60,14 +59,14 @@ uma interface. Veja [Stores e capacidades](./drivers.md).
 
 ## Ler vs. inspecionar
 
-- `Cache::get($key, $default)` retorna o valor ou seu padrão. Simples.
-- `Cache::entry($key)` retorna um [`CacheEntry`](./construtor-de-opcoes.md#cacheentry)
+- `Cacheer::get($key, $default)` retorna o valor ou seu padrão. Simples.
+- `Cacheer::entry($key)` retorna um [`CacheEntry`](./construtor-de-opcoes.md#cacheentry)
   para você distinguir um `null` armazenado de um miss e ler timestamps e TTL
   restante.
 
 ## Onde fica a configuração
 
-Não há configuração ambiente. Um `Cache` é exatamente o que você constrói: uma
+Não há configuração ambiente. Um `Cacheer` é exatamente o que você constrói: uma
 store (construída a partir de um [`PipelineConfig`](./configuracao.md) quando
 persiste), um `Clock` opcional, um executor deferido e um dispatcher de eventos. A
 biblioteca nunca lê `.env`, muda o timezone nem cria schema sozinha.

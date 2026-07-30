@@ -4,7 +4,7 @@ Persistent stores encode values through a pipeline you describe with a
 `PipelineConfig`. Here's a store that compresses and encrypts every value.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Config\PipelineConfig;
 use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
 
@@ -12,7 +12,7 @@ $pipeline = PipelineConfig::default()
     ->withGzip()                                                     // compress large payloads
     ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current')); // AES-256-GCM
 
-$cache = Cache::file(__DIR__ . '/cache', $pipeline);
+$cache = Cacheer::file(__DIR__ . '/cache', $pipeline);
 
 $cache->set('token', 'sensitive-data');   // stored compressed + encrypted
 echo $cache->get('token');                // 'sensitive-data' — decrypted transparently

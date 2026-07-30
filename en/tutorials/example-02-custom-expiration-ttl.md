@@ -3,10 +3,10 @@
 Every method that stores a value accepts the same TTL forms.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-$cache = Cache::inMemory();
+$cache = Cacheer::inMemory();
 
 $cache->set('a', $v, ttl: 3600);                     // int seconds
 $cache->set('b', $v, ttl: '2 hours');                // human string

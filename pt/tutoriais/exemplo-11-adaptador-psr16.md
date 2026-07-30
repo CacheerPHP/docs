@@ -1,13 +1,13 @@
 # Adaptador PSR-16
 
-Embrulhe um `Cache` em `Psr16Cache` para entregar a qualquer biblioteca interoperável
+Embrulhe um `Cacheer` em `Psr16Cache` para entregar a qualquer biblioteca interoperável
 um `Psr\SimpleCache\CacheInterface` padrão.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Psr\Psr16Cache;
 
-$psr16 = new Psr16Cache(Cache::file(__DIR__ . '/cache'));
+$psr16 = new Psr16Cache(Cacheer::file(__DIR__ . '/cache'));
 
 $psr16->set('token', 'abc123', 1800);   // ttl: int segundos, DateInterval ou null
 $psr16->get('token');                    // 'abc123'

@@ -7,11 +7,11 @@ Stores that implement `PrunableStore` (all four built-ins) can sweep expired
 entries and report how many were removed.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\FileStore;
 
 $store = new FileStore(__DIR__ . '/cache');
-$cache = new Cache($store);
+$cache = new Cacheer($store);
 
 // ... time passes, entries expire ...
 

@@ -5,7 +5,7 @@ memória local primeiro e caem para a rede só num miss; o valor é promovido de
 L1.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Kernel\Ttl;
 use Silviooosilva\CacheerPhp\Stores\ArrayStore;
 use Silviooosilva\CacheerPhp\Stores\Support\PredisConnection;
@@ -15,7 +15,7 @@ use Silviooosilva\CacheerPhp\Support\SystemClock;
 $clock = new SystemClock();
 $l2 = new RedisStore(new PredisConnection(new Predis\Client()), 'app', clock: $clock);
 
-$cache = Cache::tiered(
+$cache = Cacheer::tiered(
     l1: new ArrayStore($clock),  // por processo, instantâneo
     l2: $l2,                     // compartilhado na frota
     l1MaxTtl: Ttl::seconds(10),  // limita quanto tempo um valor vive localmente

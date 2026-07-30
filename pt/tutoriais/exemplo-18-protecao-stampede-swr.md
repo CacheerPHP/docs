@@ -9,9 +9,9 @@ Quando muitas requisições dão miss na mesma chave ao mesmo tempo, só uma cal
 demais esperam e leem o resultado dela.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 $value = $cache->remember('expensive', ttl: '5 minutes', callback: function () {
     return run_expensive_query(); // roda uma vez entre workers concorrentes
@@ -42,7 +42,7 @@ usuário não esperar nem pela leitura nem pelo refresh:
 ```php
 use Silviooosilva\CacheerPhp\Support\AfterResponseDeferredExecutor;
 
-$cache = new Cache($store, executor: new AfterResponseDeferredExecutor());
+$cache = new Cacheer($store, executor: new AfterResponseDeferredExecutor());
 ```
 
 Veja [Remember e locks](../guias/remember-e-locks.md) e

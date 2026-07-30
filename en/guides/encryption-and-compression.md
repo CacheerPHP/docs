@@ -8,13 +8,13 @@ authenticated envelope. You describe the pipeline with an immutable
 ```php
 use Silviooosilva\CacheerPhp\Config\PipelineConfig;
 use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
 $pipeline = PipelineConfig::default()
     ->withGzip()
     ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current'));
 
-$cache = Cache::file('/var/cache/app', $pipeline);
+$cache = Cacheer::file('/var/cache/app', $pipeline);
 ```
 
 ## Compression

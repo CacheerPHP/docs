@@ -4,7 +4,7 @@ Contadores e escritas condicionais são uma capacidade da store (`AtomicStore`),
 atômicos até a garantia do backend.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Kernel\Key;
 use Silviooosilva\CacheerPhp\Stores\FileStore;
 

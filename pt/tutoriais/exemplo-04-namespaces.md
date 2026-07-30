@@ -4,9 +4,9 @@ Escopos são keyspaces isolados. Eles substituem os namespaces posicionais por s
 da v5.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 // O mesmo nome de chave é independente por escopo.
 $cache->scope('app')->set('config', $appConfig);
@@ -28,5 +28,5 @@ $tenant->scope('reports')->set('daily', $rows);
 $tenant->clear(); // limpa o tenant e tudo abaixo dele
 ```
 
-Um `ScopedCache` tem a mesma API que `Cache` — `set`, `get`, `remember`, `flexible`,
+Um `ScopedCacheer` tem a mesma API que `Cacheer` — `set`, `get`, `remember`, `flexible`,
 lotes e `scope()` de novo. Veja o [guia de Escopos](../guias/escopos.md).

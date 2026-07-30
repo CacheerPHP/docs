@@ -5,10 +5,10 @@ from a **primary** store and, when the primary starts failing, trips a **circuit
 breaker** and serves from a **fallback** — without hammering the broken backend.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\ArrayStore;
 
-$cache = Cache::resilient(
+$cache = Cacheer::resilient(
     primary:  $redisStore,          // normally serves everything
     fallback: new ArrayStore($clock), // takes over when Redis is unhealthy
 );
@@ -30,7 +30,7 @@ Tune it by passing your own `CircuitBreaker`:
 ```php
 use Silviooosilva\CacheerPhp\Support\CircuitBreaker;
 
-$cache = Cache::resilient($primary, $fallback, breaker: new CircuitBreaker(/* thresholds */));
+$cache = Cacheer::resilient($primary, $fallback, breaker: new CircuitBreaker(/* thresholds */));
 ```
 
 ## Fails closed, never wrong
@@ -56,8 +56,8 @@ They compose. A common shape is a local L1, a shared L2, and a resilient wrapper
 an L2 outage degrades to the fallback instead of erroring:
 
 ```php
-$shared = Cache::resilient($redisStore, new ArrayStore($clock));
-$cache  = Cache::tiered(new ArrayStore($clock), $shared->/* store */);
+$shared = Cacheer::resilient($redisStore, new ArrayStore($clock));
+$cache  = Cacheer::tiered(new ArrayStore($clock), $shared->/* store */);
 ```
 
 See [Observability](./observability.md) to emit `cache.failure` events when the

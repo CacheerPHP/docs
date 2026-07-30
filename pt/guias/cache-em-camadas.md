@@ -6,10 +6,10 @@ rede num miss; o valor é então promovido de volta ao L1, para a próxima leitu
 rápida.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\ArrayStore;
 
-$cache = Cache::tiered(
+$cache = Cacheer::tiered(
     l1: new ArrayStore($clock),   // por processo, leituras instantâneas
     l2: $redisStore,              // compartilhado na frota
 );
@@ -40,7 +40,7 @@ local stale:
 ```php
 use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-$cache = Cache::tiered($l1, $l2, l1MaxTtl: Ttl::seconds(10));
+$cache = Cacheer::tiered($l1, $l2, l1MaxTtl: Ttl::seconds(10));
 ```
 
 ## Coerência entre workers
@@ -63,7 +63,7 @@ Promoções são emitidas como eventos `cache.promotion` quando você embrulha o
 camadas com instrumentação:
 
 ```php
-$cache = Cache::tiered($l1, $l2, events: $events);
+$cache = Cacheer::tiered($l1, $l2, events: $events);
 ```
 
 Veja [Observabilidade](./observabilidade.md).

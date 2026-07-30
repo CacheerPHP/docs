@@ -1,33 +1,56 @@
-# O objeto CacheEntry
+# Formatando valores cacheados (JSON, array, objeto, string)
 
-> A v5 tinha formatadores de saída (`toJson`, `toArray`, `toString`). A v6 guarda
-> valores sem perdas — você recebe de volta exatamente o que colocou. Quando precisa de
-> metadados de uma entrada, use `entry()`.
+A v6 guarda valores **sem perdas** — `get()` devolve exatamente o que você colocou.
+Quando quiser remodelar um valor na saída, use o `CacheDataFormatter`. Há duas
+formas de acessá-lo; escolha a que ler melhor.
 
-`get()` retorna o valor; `entry()` retorna um `CacheEntry` com hit/miss, timestamps e
-TTL restante.
-
-```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
-use Silviooosilva\CacheerPhp\Support\SystemClock;
-
-$cache = Cache::inMemory();
-$cache->set('user:42', ['id' => 42, 'name' => 'Ada'], ttl: '10 minutes');
-
-$entry = $cache->entry('user:42');
-
-$entry->isHit();                          // true
-$entry->value();                          // ['id' => 42, 'name' => 'Ada']
-$entry->createdAt();                      // timestamp unix da escrita
-$entry->expiresAt();                      // timestamp unix, ou null se para sempre
-$entry->remainingTtl(new SystemClock());  // segundos restantes, ou null se para sempre
-```
-
-A formatação é responsabilidade da sua aplicação agora:
+## 1. Embrulhe qualquer valor
 
 ```php
-$json = json_encode($cache->get('user:42'));
+use Silviooosilva\CacheerPhp\Cacheer;
+use Silviooosilva\CacheerPhp\Support\CacheDataFormatter;
+
+$cache = Cacheer::inMemory();
+$cache->set('user:1', ['id' => 1, 'name' => 'Ada']);
+
+$fmt = new CacheDataFormatter($cache->get('user:1'));
+
+$fmt->toJson();    // '{ "id": 1, "name": "Ada" }' (bonito, UTF-8, JSON_THROW_ON_ERROR)
+$fmt->toArray();   // ['id' => 1, 'name' => 'Ada']
+$fmt->toObject();  // stdClass { id: 1, name: 'Ada' }
+$fmt->toString();  // cast para string (melhor para escalares)
+$fmt->value();     // o valor cru, sem formatação
 ```
 
-`entry()` também é como você distingue um **`null` armazenado** de um **miss** — veja
-[Valores falsy e null](./exemplo-13-valores-falsy.md).
+## 2. A forma fluente — uma view formatada
+
+`->formatted()` retorna uma view de leitura formatada onde `get()` já retorna um
+`CacheDataFormatter`, então você encadeia em uma linha:
+
+```php
+$cache = Cacheer::file(__DIR__ . '/cache')->formatted();
+
+$json = $cache->get('user:1')->toJson();
+$arr  = $cache->get('user:1')->toArray();
+```
+
+A view também formata o `remember()`, repassa `set`/`has`/`delete`/`scope`, e
+`raw()` devolve o cache subjacente:
+
+```php
+$json = $cache->remember('report', 60, fn () => build_report())->toJson();
+
+$cache->set('k', 'v');          // escritas passam direto
+$raw = $cache->raw()->get('k'); // 'v' — o valor sem formatação
+```
+
+## Por que o próprio `get()` não é o formatador
+
+O `Cacheer::get()` base precisa retornar valores crus — um `false`, `null` ou `0`
+cacheado tem que voltar como está, e os adaptadores PSR-16/PSR-6 dependem disso.
+Então a formatação é **opt-in** via o wrapper standalone ou a view `formatted()`,
+nunca um modo escondido no `get()`.
+
+> `toJson()` lança `\JsonException` para um valor não codificável, em vez de
+> retornar `false` silenciosamente. `toString()` segue as regras de cast do PHP —
+> ideal para escalares.

@@ -2,17 +2,17 @@
 
 O CacheerPHP 6 **não tem configuração ambiente**. Nunca carrega `.env`, nunca muda o
 timezone global e nunca cria um schema de banco por ter sido autoloadeado. Um
-`Cache` é exatamente, e apenas, o que você constrói.
+`Cacheer` é exatamente, e apenas, o que você constrói.
 
 ## O caminho comum
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::inMemory();                 // ArrayStore — sem dependências
-$cache = Cache::file('/var/cache/app');     // FileStore — persistente, sem dependências
-$cache = Cache::database($pdo, 'cacheer');  // DatabaseStore — você é dono do PDO
-$cache = Cache::redis($connection);         // RedisStore — você é dono da conexão
+$cache = Cacheer::inMemory();                 // ArrayStore — sem dependências
+$cache = Cacheer::file('/var/cache/app');     // FileStore — persistente, sem dependências
+$cache = Cacheer::database($pdo, 'cacheer');  // DatabaseStore — você é dono do PDO
+$cache = Cacheer::redis($connection);         // RedisStore — você é dono da conexão
 ```
 
 É tudo que a maioria dos apps precisa. O resto abaixo é opcional.
@@ -31,7 +31,7 @@ $pipeline = PipelineConfig::default()
     ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current'))
     ->withMaxValueBytes(2_000_000);
 
-$cache = Cache::file('/var/cache/app', $pipeline);
+$cache = Cacheer::file('/var/cache/app', $pipeline);
 ```
 
 Veja [Criptografia e compressão](./criptografia-e-compressao.md) para detalhes.
@@ -45,15 +45,15 @@ clock falso para que expiração e janelas de stale sejam determinísticas sem
 ```php
 use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-$cache = Cache::file('/var/cache/app', clock: new SystemClock());
+$cache = Cacheer::file('/var/cache/app', clock: new SystemClock());
 ```
 
 ## Injeção de dependências completa
 
-Quando precisar controlar tudo, construa `Cache` diretamente:
+Quando precisar controlar tudo, construa `Cacheer` diretamente:
 
 ```php
-$cache = new Cache(
+$cache = new Cacheer(
     store:    $store,        // qualquer Store
     clock:    $clock,        // Clock
     executor: $executor,     // DeferredExecutor — stale refresh após a resposta
@@ -69,10 +69,10 @@ como efeito colateral do autoload. Um bootstrap pequeno basta:
 
 ```php
 // bootstrap/cache.php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\Support\PredisConnection;
 
-return Cache::redis(new PredisConnection(new Predis\Client([
+return Cacheer::redis(new PredisConnection(new Predis\Client([
     'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
     'port' => (int) ($_ENV['REDIS_PORT'] ?? 6379),
 ])), prefix: $_ENV['CACHE_PREFIX'] ?? 'app');

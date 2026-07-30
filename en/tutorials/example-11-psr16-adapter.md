@@ -1,13 +1,13 @@
 # PSR-16 adapter
 
-Wrap a `Cache` in `Psr16Cache` to hand any interoperable library a standard
+Wrap a `Cacheer` in `Psr16Cache` to hand any interoperable library a standard
 `Psr\SimpleCache\CacheInterface`.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Psr\Psr16Cache;
 
-$psr16 = new Psr16Cache(Cache::file(__DIR__ . '/cache'));
+$psr16 = new Psr16Cache(Cacheer::file(__DIR__ . '/cache'));
 
 $psr16->set('token', 'abc123', 1800);   // ttl: int seconds, DateInterval, or null
 $psr16->get('token');                    // 'abc123'

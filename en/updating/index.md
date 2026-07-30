@@ -1,13 +1,10 @@
 # Upgrading to CacheerPHP 6
 
-CacheerPHP 6 is an instance-first rewrite. You can upgrade in one of two ways:
-
-1. **Bridge first, then modernize.** Swap your v5 object for the `LegacyCacheer`
-   bridge — it keeps the v5 method names — then move call sites to the `Cache` API
-   at your own pace.
-2. **Rewrite directly.** Replace call sites using the mapping below.
-
-Either way, follow one path from installation to a passing test suite.
+CacheerPHP 6 is an instance-first rewrite. Migrating is mostly mechanical: rename
+the v5 methods to the v6 names (a Rector set automates the common ones), move the
+positional namespace onto `scope()`, and let your existing cached data upgrade
+itself via rewrite-on-read. There is no runtime v5 shim — the migration is the
+rename. If a service can't move yet, keep it on `^5.2`.
 
 ## 1. Install
 
@@ -23,10 +20,10 @@ v6 requires PHP 8.3+. The core installs with no backend clients; `ArrayStore` an
 
 | v5 | v6 |
 |---|---|
-| `(new Cacheer())->setDriver()->useFileDriver()` | `Cache::file('/var/cache')` |
-| `->useDatabaseDriver()` | `Cache::database($pdo, 'cacheer')` |
-| `->useRedisDriver()` | `Cache::redis($connection)` |
-| array driver / tests | `Cache::inMemory()` |
+| `(new Cacheer())->setDriver()->useFileDriver()` | `Cacheer::file('/var/cache')` |
+| `->useDatabaseDriver()` | `Cacheer::database($pdo, 'cacheer')` |
+| `->useRedisDriver()` | `Cacheer::redis($connection)` |
+| array driver / tests | `Cacheer::inMemory()` |
 
 The database schema is **never** created implicitly — run
 `DatabaseStoreSchema::migrate($pdo, $table)` (or `cacheer migrate`) once.
@@ -40,7 +37,7 @@ The database schema is **never** created implicitly — run
 | `getCache($k, $ns, $ttl)` | `get($k)` | Read-time TTL removed |
 | `clearCache($k, $ns)` | `delete($k)` | `scope($ns)->delete(...)` |
 | `flushCache()` | `clear()` | Limited to the configured keyspace |
-| `getAndForget()` / `pull()` | `pull()` (bridge) | Atomicity reported by capability |
+| `getAndForget()` / `pull()` | `get($k)` then `delete($k)` | v6 has no `pull()`; two calls |
 | `has()` / `missing()` | `has()` | — |
 | positional namespace | `scope('name')` | Returns a scoped cache |
 | `tag($tag, ...$keys)` | `TaggableStore::tag()` | Capability, not core |
@@ -51,37 +48,26 @@ The database schema is **never** created implicitly — run
 ### Automated renames (Rector)
 
 An optional Rector set ships at `rector.php` in the package. It renames the
-straightforward v5 methods on `Cacheer`/`LegacyCacheer`. It does **not** rewrite
-construction, move the namespace argument onto `scope()`, or drop the read-time
-TTL — do those by hand using the tables above.
+straightforward v5 methods on `Cacheer` (`putCache`→`set`, `getCache`→`get`, …).
+It does **not** rewrite construction, move the namespace argument onto `scope()`,
+or drop the read-time TTL — do those by hand using the tables above.
 
 ```sh
 composer require rector/rector --dev
 vendor/bin/rector process src --config vendor/silviooosilva/cacheer-php/rector.php --dry-run
 ```
 
-## 4. The compatibility bridge
+## 4. Migrating incrementally
 
-The bridge is a drop-in for the v5 surface on top of the v6 engine:
+There is no runtime v5 shim, but you don't have to convert everything at once:
 
-```php
-use Silviooosilva\CacheerPhp\Compat\LegacyCacheer;
-
-$cache = LegacyCacheer::file('/var/cache');   // or ::inMemory()
-$cache->putCache('user:1', $user, 'accounts', 3600);
-$user = $cache->getCache('user:1', 'accounts');
-```
-
-Enable deprecations in development to locate call sites to migrate — they are
-**silent by default** so production logs stay clean:
-
-```php
-$cache = LegacyCacheer::file('/var/cache', emitDeprecations: true);
-```
-
-The bridge also exposes `forever`, `has`, `missing`, `pull`/`getAndForget`,
-`renewCache`, `increment`/`decrement`, `remember`/`rememberForever`, `tag`/
-`flushTag`, `appendCache`, and `isSuccess`/`getMessage`.
+- Migrate one call site (or module) at a time to the `Cacheer` API; the mapping
+  above and the Rector set cover most of the work.
+- Keep the **same store** across old and new code during the transition — a
+  `Cacheer::file(...)` reads whatever is already on disk (see §5), so migrated and
+  unmigrated code share data.
+- If a whole service can't move yet, pin it to `^5.2` and migrate it later. v5 and
+  v6 are different major lines, not two APIs on one install.
 
 ## 5. Data compatibility and rewrite-on-read
 

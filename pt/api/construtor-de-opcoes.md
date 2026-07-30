@@ -23,7 +23,7 @@ $key->within(Scope $scope): self
 $key->identity(): string
 ```
 
-Todo método de `Cache` aceita também uma string simples; ela é embrulhada como
+Todo método de `Cacheer` aceita também uma string simples; ela é embrulhada como
 `Key::named($string)` no escopo do chamador.
 
 ## `Scope`

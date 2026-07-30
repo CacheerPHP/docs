@@ -1,12 +1,10 @@
 # Atualizando para o CacheerPHP 6
 
-O CacheerPHP 6 é uma reescrita baseada em instâncias. Você pode atualizar de duas
-formas:
-
-1. **Ponte primeiro, depois modernize.** Troque seu objeto v5 pela ponte
-   `LegacyCacheer` — que mantém os nomes de métodos da v5 — e migre as chamadas para
-   a API `Cache` no seu ritmo.
-2. **Reescreva diretamente.** Substitua as chamadas usando o mapeamento abaixo.
+O CacheerPHP 6 é uma reescrita baseada em instâncias. A migração é quase toda
+mecânica: renomeie os métodos v5 para os nomes v6 (um conjunto Rector automatiza os
+comuns), mova o namespace posicional para `scope()`, e deixe seus dados já cacheados
+se atualizarem sozinhos via reescrita na leitura. Não há shim de runtime da v5 — a
+migração é a renomeação. Se um serviço ainda não puder migrar, mantenha-o em `^5.2`.
 
 ## 1. Instalação
 
@@ -21,10 +19,10 @@ A v6 exige PHP 8.3+. O núcleo instala sem clientes de backend; `ArrayStore` e
 
 | v5 | v6 |
 |---|---|
-| `(new Cacheer())->setDriver()->useFileDriver()` | `Cache::file('/var/cache')` |
-| `->useDatabaseDriver()` | `Cache::database($pdo, 'cacheer')` |
-| `->useRedisDriver()` | `Cache::redis($connection)` |
-| driver de array / testes | `Cache::inMemory()` |
+| `(new Cacheer())->setDriver()->useFileDriver()` | `Cacheer::file('/var/cache')` |
+| `->useDatabaseDriver()` | `Cacheer::database($pdo, 'cacheer')` |
+| `->useRedisDriver()` | `Cacheer::redis($connection)` |
+| driver de array / testes | `Cacheer::inMemory()` |
 
 O schema do banco **nunca** é criado implicitamente — execute
 `DatabaseStoreSchema::migrate($pdo, $table)` (ou `cacheer migrate`) uma vez.
@@ -38,7 +36,7 @@ O schema do banco **nunca** é criado implicitamente — execute
 | `getCache($k, $ns, $ttl)` | `get($k)` | TTL de leitura removido |
 | `clearCache($k, $ns)` | `delete($k)` | `scope($ns)->delete(...)` |
 | `flushCache()` | `clear()` | Limitado ao keyspace configurado |
-| `getAndForget()` / `pull()` | `pull()` (ponte) | Atomicidade reportada por capacidade |
+| `getAndForget()` / `pull()` | `get($k)` e depois `delete($k)` | a v6 não tem `pull()`; duas chamadas |
 | `has()` / `missing()` | `has()` | — |
 | namespace posicional | `scope('name')` | Retorna um cache com escopo |
 | `tag($tag, ...$keys)` | `TaggableStore::tag()` | Capacidade, não núcleo |
@@ -49,34 +47,26 @@ O schema do banco **nunca** é criado implicitamente — execute
 ### Renomeações automáticas (Rector)
 
 Um conjunto Rector opcional acompanha o pacote em `rector.php`. Ele renomeia os
-métodos v5 diretos; **não** reescreve a construção, não move o argumento de
-namespace para `scope()` nem remove o TTL de leitura — faça isso manualmente.
+métodos v5 diretos em `Cacheer` (`putCache`→`set`, `getCache`→`get`, …); **não**
+reescreve a construção, não move o argumento de namespace para `scope()` nem remove
+o TTL de leitura — faça isso manualmente.
 
 ```sh
 composer require rector/rector --dev
 vendor/bin/rector process src --config vendor/silviooosilva/cacheer-php/rector.php --dry-run
 ```
 
-## 4. A ponte de compatibilidade
+## 4. Migrando de forma incremental
 
-```php
-use Silviooosilva\CacheerPhp\Compat\LegacyCacheer;
+Não há shim de runtime da v5, mas você não precisa converter tudo de uma vez:
 
-$cache = LegacyCacheer::file('/var/cache');   // ou ::inMemory()
-$cache->putCache('user:1', $user, 'accounts', 3600);
-$user = $cache->getCache('user:1', 'accounts');
-```
-
-Ative as depreciações em desenvolvimento para localizar as chamadas — elas ficam
-**silenciosas por padrão**:
-
-```php
-$cache = LegacyCacheer::file('/var/cache', emitDeprecations: true);
-```
-
-A ponte também expõe `forever`, `has`, `missing`, `pull`/`getAndForget`,
-`renewCache`, `increment`/`decrement`, `remember`/`rememberForever`, `tag`/
-`flushTag`, `appendCache` e `isSuccess`/`getMessage`.
+- Migre um ponto de chamada (ou módulo) por vez para a API `Cacheer`; o mapeamento
+  acima e o Rector cobrem a maior parte.
+- Mantenha a **mesma store** entre código velho e novo durante a transição — um
+  `Cacheer::file(...)` lê o que já está em disco (veja a §5), então código migrado e
+  não migrado compartilham dados.
+- Se um serviço inteiro ainda não puder mudar, fixe-o em `^5.2` e migre depois. v5 e
+  v6 são linhas major diferentes, não duas APIs numa instalação.
 
 ## 5. Compatibilidade de dados e reescrita na leitura
 

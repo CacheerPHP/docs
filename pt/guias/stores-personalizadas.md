@@ -82,7 +82,7 @@ final class MyStoreConformanceTest extends StoreConformance
 }
 ```
 
-Se passar, sua store compõe com `Cache`, escopos, camadas, resiliência, os adaptadores
+Se passar, sua store compõe com `Cacheer`, escopos, camadas, resiliência, os adaptadores
 PSR e a CLI exatamente como as nativas.
 
 ## 5. Sendo listado como compatível

@@ -3,9 +3,9 @@
 Three levels of removal: one key, one scope, or the whole store.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 // One key.
 $cache->delete('user:123');

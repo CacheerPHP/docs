@@ -5,9 +5,9 @@ Leia, grave e apague muitas chaves de uma vez. Em stores que implementam `BatchS
 transação em vez de um loop.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 // Grave várias sob um TTL (as chaves devem ser strings).
 $cache->setMany([

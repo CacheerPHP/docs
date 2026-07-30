@@ -39,10 +39,10 @@ O refresh roda pelo **executor deferido** injetado:
   pela leitura stale nem pelo refresh.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Support\AfterResponseDeferredExecutor;
 
-$cache = new Cache($store, executor: new AfterResponseDeferredExecutor());
+$cache = new Cacheer($store, executor: new AfterResponseDeferredExecutor());
 ```
 
 O CacheerPHP nunca chama um refresh de "background" a menos que um executor deferido

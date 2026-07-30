@@ -4,7 +4,7 @@ Counters and conditional writes are a store capability (`AtomicStore`), atomic t
 the guarantee of the backend.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Kernel\Key;
 use Silviooosilva\CacheerPhp\Stores\FileStore;
 

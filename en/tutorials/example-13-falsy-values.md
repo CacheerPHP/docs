@@ -4,9 +4,9 @@ A cached `null`, `false`, `0`, `''`, or `[]` is a **hit**, returned exactly as
 stored. Only `entry()` can distinguish a stored `null` from a miss.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::inMemory();
+$cache = Cacheer::inMemory();
 
 $cache->set('flag', false);
 $cache->set('count', 0);

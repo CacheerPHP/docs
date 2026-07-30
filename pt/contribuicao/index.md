@@ -21,7 +21,7 @@ Os testes usam [Pest](https://pestphp.com/) e são separados por área:
 
 ```sh
 composer test            # suíte unitária sem serviços (padrão)
-composer test:kernel     # núcleo v6 (Cache, adaptadores, CLI, rehearsals)
+composer test:kernel     # núcleo v6 (Cacheer, adaptadores, CLI, rehearsals)
 composer test:contract   # conformidade das stores (Array, File)
 composer test:storage    # pipeline de armazenamento / envelope
 composer test:concurrency  # harnesses de contenção de locks e contadores

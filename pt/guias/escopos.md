@@ -65,6 +65,6 @@ barras ou caracteres de controle (`InvalidScopeException`).
 
 ## Tudo é um escopo internamente
 
-O cache raiz é apenas o escopo raiz. `ScopedCache` expõe a mesma API de
-leitura/escrita que `Cache` (`get`, `set`, `delete`, `has`, `remember`, `flexible`,
+O cache raiz é apenas o escopo raiz. `ScopedCacheer` expõe a mesma API de
+leitura/escrita que `Cacheer` (`get`, `set`, `delete`, `has`, `remember`, `flexible`,
 lotes e `scope()` de novo).

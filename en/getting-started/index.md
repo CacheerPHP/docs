@@ -1,6 +1,6 @@
 # Getting Started
 
-CacheerPHP 6 is an instance-first cache: a small `Cache` kernel over a minimal
+CacheerPHP 6 is an instance-first cache: a small `Cacheer` kernel over a minimal
 `Store` contract, with optional capabilities (batch, tags, locks, atomic
 counters), composable decorators (tiered, resilient, instrumented), a versioned
 authenticated storage pipeline, and PSR-16/PSR-6 adapters.
@@ -32,10 +32,10 @@ This pulls in the PSR contracts automatically (`psr/simple-cache`, `psr/cache`,
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
 // Dependency-free, in-process (great for tests and short CLI runs).
-$cache = Cache::inMemory();
+$cache = Cacheer::inMemory();
 
 // Write with a TTL: seconds, "10 minutes", a DateInterval, or null (forever).
 $cache->set('user:123', ['name' => 'John Doe'], ttl: '10 minutes');
@@ -56,12 +56,12 @@ $cache->delete('user:123');
 Swap the store, keep the API. See [Stores & capabilities](../api/drivers.md).
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::inMemory();                    // in-process array store
-$cache = Cache::file('/var/cache/app');        // persistent, dependency-free
-$cache = Cache::database($pdo, 'cacheer');     // inject your own PDO
-$cache = Cache::redis($connection);            // predis or phpredis adapter
+$cache = Cacheer::inMemory();                    // in-process array store
+$cache = Cacheer::file('/var/cache/app');        // persistent, dependency-free
+$cache = Cacheer::database($pdo, 'cacheer');     // inject your own PDO
+$cache = Cacheer::redis($connection);            // predis or phpredis adapter
 ```
 
 Create the database schema explicitly first (it is never a side effect):
@@ -122,16 +122,10 @@ See [PSR-16 & PSR-6 adapters](../api/psr16-adapter.md).
 
 ## Coming from v5?
 
-The `LegacyCacheer` bridge exposes the v5 method surface on the v6 engine, so you
-can upgrade incrementally:
-
-```php
-use Silviooosilva\CacheerPhp\Compat\LegacyCacheer;
-
-$cache = LegacyCacheer::file('/var/cache'); // or ::inMemory()
-$cache->putCache('user:1', $user, 'accounts', 3600);
-$user = $cache->getCache('user:1', 'accounts');
-```
+Migrating is mostly mechanical — rename the v5 methods to the v6 names
+(`putCache`→`set`, `getCache`→`get`, positional namespace → `scope()`), and let
+your existing cached data upgrade itself via rewrite-on-read. An optional Rector
+set automates the common renames; if a service can't move yet, keep it on `^5.2`.
 
 See the [migration guide](../updating/index.md) for the full mapping.
 

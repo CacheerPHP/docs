@@ -1,33 +1,55 @@
-# The CacheEntry object
+# Formatting cached values (JSON, array, object, string)
 
-> v5 had output formatters (`toJson`, `toArray`, `toString`). v6 stores values
-> losslessly instead — you get back exactly what you put in. When you need
-> metadata about an entry, use `entry()`.
+v6 stores values **losslessly** — `get()` gives back exactly what you put in. When
+you want to reshape a value on the way out, use the `CacheDataFormatter`. There are
+two ways to reach it; pick whichever reads best.
 
-`get()` returns the value; `entry()` returns a `CacheEntry` with hit/miss,
-timestamps, and remaining TTL.
-
-```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
-use Silviooosilva\CacheerPhp\Support\SystemClock;
-
-$cache = Cache::inMemory();
-$cache->set('user:42', ['id' => 42, 'name' => 'Ada'], ttl: '10 minutes');
-
-$entry = $cache->entry('user:42');
-
-$entry->isHit();                          // true
-$entry->value();                          // ['id' => 42, 'name' => 'Ada']
-$entry->createdAt();                      // unix timestamp of the write
-$entry->expiresAt();                      // unix timestamp, or null if forever
-$entry->remainingTtl(new SystemClock());  // seconds left, or null if forever
-```
-
-Formatting is your application's job now:
+## 1. Wrap any value
 
 ```php
-$json = json_encode($cache->get('user:42'));
+use Silviooosilva\CacheerPhp\Cacheer;
+use Silviooosilva\CacheerPhp\Support\CacheDataFormatter;
+
+$cache = Cacheer::inMemory();
+$cache->set('user:1', ['id' => 1, 'name' => 'Ada']);
+
+$fmt = new CacheDataFormatter($cache->get('user:1'));
+
+$fmt->toJson();    // '{ "id": 1, "name": "Ada" }' (pretty, UTF-8, JSON_THROW_ON_ERROR)
+$fmt->toArray();   // ['id' => 1, 'name' => 'Ada']
+$fmt->toObject();  // stdClass { id: 1, name: 'Ada' }
+$fmt->toString();  // string cast (best for scalars)
+$fmt->value();     // the raw, unformatted value
 ```
 
-`entry()` is also how you distinguish a **stored `null`** from a **miss** — see
-[Falsy and null values](./example-13-falsy-values.md).
+## 2. The fluent way — a formatted view
+
+`->formatted()` returns a read-formatting view where `get()` returns a
+`CacheDataFormatter` directly, so you can chain in one line:
+
+```php
+$cache = Cacheer::file(__DIR__ . '/cache')->formatted();
+
+$json = $cache->get('user:1')->toJson();
+$arr  = $cache->get('user:1')->toArray();
+```
+
+The view also formats `remember()`, proxies `set`/`has`/`delete`/`scope`, and
+`raw()` hands back the underlying cache:
+
+```php
+$json = $cache->remember('report', 60, fn () => build_report())->toJson();
+
+$cache->set('k', 'v');          // writes pass straight through
+$raw = $cache->raw()->get('k'); // 'v' — the unformatted value
+```
+
+## Why `get()` itself isn't the formatter
+
+The base `Cacheer::get()` must return raw values — a cached `false`, `null`, or
+`0` has to come back as-is, and the PSR-16/PSR-6 adapters depend on it. So
+formatting is **opt-in** via the standalone wrapper or the `formatted()` view,
+never a hidden mode on `get()`.
+
+> `toJson()` throws a `\JsonException` on an unencodable value instead of silently
+> returning `false`. `toString()` follows PHP's cast rules — ideal for scalars.

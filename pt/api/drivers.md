@@ -94,9 +94,9 @@ store(s) embrulhada(s) oferecem, então a composição nunca perde uma funcional
   emite eventos tipados; valores nunca são capturados a menos que você opte.
 
 ```php
-$cache = Cache::tiered(new ArrayStore($clock), $redisStore);
-$cache = Cache::resilient($primary, $fallback);
-$cache = Cache::instrumented($store, $events);
+$cache = Cacheer::tiered(new ArrayStore($clock), $redisStore);
+$cache = Cacheer::resilient($primary, $fallback);
+$cache = Cacheer::instrumented($store, $events);
 ```
 
 ## Escrevendo a sua

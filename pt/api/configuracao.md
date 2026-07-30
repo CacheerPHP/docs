@@ -1,7 +1,7 @@
 # Configuração
 
 A v6 não tem configuração ambiente — sem `.env`, sem timezone global, sem schema
-implícito. Um `Cache` é exatamente o que você constrói. Duas coisas são
+implícito. Um `Cacheer` é exatamente o que você constrói. Duas coisas são
 configuradas: **como a store é construída** (construtores nomeados) e **como os
 valores são armazenados** (`PipelineConfig`).
 
@@ -10,17 +10,46 @@ valores são armazenados** (`PipelineConfig`).
 O caminho comum precisa de uma linha:
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::inMemory();                    // ArrayStore
-$cache = Cache::file('/var/cache/app');        // FileStore
-$cache = Cache::database($pdo, 'cacheer');     // DatabaseStore (injete o PDO)
-$cache = Cache::redis($connection);            // RedisStore (injete a conexão)
+$cache = Cacheer::inMemory();                    // ArrayStore
+$cache = Cacheer::file('/var/cache/app');        // FileStore
+$cache = Cacheer::database($pdo, 'cacheer');     // DatabaseStore (injete o PDO)
+$cache = Cacheer::redis($connection);            // RedisStore (injete a conexão)
 ```
 
 Cada construtor persistente aceita um `PipelineConfig` e `Clock` opcionais. Veja
-[Cache e ScopedCache](./funcoes-cache.md#construtores-nomeados) para as assinaturas
+[Cache e ScopedCacheer](./funcoes-cache.md#construtores-nomeados) para as assinaturas
 completas, incluindo os decorators `tiered`, `resilient` e `instrumented`.
+
+## `Cacheer::build()` — o builder fluente
+
+Para uma configuração mais rica, `Cacheer::build()` retorna um `CacheerBuilder` que
+monta uma store, um pipeline de armazenamento e uma política padrão opcional em uma
+única cadeia, e devolve um cache pronto. É açúcar sobre os construtores nomeados,
+`PipelineConfig` e `CachePolicy` — nada que você não faça à mão, só mais curto:
+
+```php
+$cache = Cacheer::build()
+    ->file('/var/cache/app')                              // ou ->inMemory() / ->database($pdo) / ->redis($conn)
+    ->gzip()                                              // pipeline
+    ->encryptWithPassphrases(['current' => $secret], 'current')
+    ->maxValueBytes(2_000_000)
+    ->defaultTtl('10 minutes')                            // política
+    ->jitter(0.10)
+    ->serveStaleOnError('2 minutes')
+    ->create();
+```
+
+| Grupo | Métodos |
+|---|---|
+| Store | `inMemory()`, `file($dir)`, `database($pdo, $table = 'cacheer_store')`, `redis($connection, $prefix = 'cacheer')` |
+| Pipeline | `json()`, `serializer()`, `gzip($level = 6)`, `compressor()`, `encrypt($keyring)`, `encryptWithPassphrases($map, $activeId)`, `encrypter()`, `maxValueBytes($n)` |
+| Política | `defaultTtl($ttl)`, `jitter($fraction)`, `negativeTtl($ttl)`, `serveStaleOnError($grace)` |
+| Outros | `clock($clock)` |
+
+`create()` retorna um `Cacheer` simples, ou um `PolicyCacheer` quando algum método
+de política foi usado (ambos expõem a mesma superfície de leitura/escrita).
 
 ## `PipelineConfig` — o pipeline de armazenamento
 
@@ -40,7 +69,7 @@ $pipeline = PipelineConfig::default()          // serializer PHP, sem compressã
     ->withMaxValueBytes(2_000_000)
     ->withV5Reader(new V5PayloadReader());
 
-$cache = Cache::file('/var/cache/app', $pipeline);
+$cache = Cacheer::file('/var/cache/app', $pipeline);
 ```
 
 | Método | Efeito |
@@ -58,13 +87,13 @@ no [guia de criptografia e compressão](../guias/criptografia-e-compressao.md).
 
 ## Injetando suas próprias dependências
 
-Para controle total, construa `Cache` diretamente:
+Para controle total, construa `Cacheer` diretamente:
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-$cache = new Cache(
+$cache = new Cacheer(
     store:    $store,
     clock:    new SystemClock(),
     executor: $deferredExecutor,   // para stale refresh após a resposta

@@ -10,14 +10,14 @@ Wrap any store with `InstrumentedStore` via the `instrumented` constructor. Ever
 operation is timed and emitted as a typed [`CacheEvent`](../api/overview.md).
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Observability\{EventBus, MetricsCollector};
 
 $events  = new EventBus();
 $metrics = new MetricsCollector();
 $events->listen($metrics->record(...));
 
-$cache = Cache::instrumented($store, $events);
+$cache = Cacheer::instrumented($store, $events);
 ```
 
 ## Event types
@@ -61,7 +61,7 @@ Bridge cache events onto an existing PSR-14 event dispatcher:
 ```php
 use Silviooosilva\CacheerPhp\Observability\Psr14EventDispatcher;
 
-$cache = Cache::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher));
+$cache = Cacheer::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher));
 ```
 
 ## Values are never leaked
@@ -71,7 +71,7 @@ $cache = Cache::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher))
 - If you enable capture for debugging, provide a redactor:
 
   ```php
-  $cache = Cache::instrumented($store, $events, captureValues: true, redactor: fn ($v) => '[redacted]');
+  $cache = Cacheer::instrumented($store, $events, captureValues: true, redactor: fn ($v) => '[redacted]');
   ```
 
 - Listener failures are **isolated**: `EventBus` wraps every listener in a

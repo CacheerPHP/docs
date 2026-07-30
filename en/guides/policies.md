@@ -16,7 +16,7 @@ $cache = $cache->withPolicy(
 );
 ```
 
-`withPolicy()` returns a `PolicyCache` wrapping the original — the policy is
+`withPolicy()` returns a `PolicyCacheer` wrapping the original — the policy is
 immutable, and each `with*()` returns a new instance.
 
 ## Default TTL — `withTtl()`

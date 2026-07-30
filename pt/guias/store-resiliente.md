@@ -5,10 +5,10 @@ Ele serve de uma store **primária** e, quando a primária começa a falhar, aci
 **circuit breaker** e serve de um **fallback** — sem martelar o backend quebrado.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\ArrayStore;
 
-$cache = Cache::resilient(
+$cache = Cacheer::resilient(
     primary:  $redisStore,            // normalmente serve tudo
     fallback: new ArrayStore($clock), // assume quando o Redis está ruim
 );
@@ -30,7 +30,7 @@ Ajuste passando seu próprio `CircuitBreaker`:
 ```php
 use Silviooosilva\CacheerPhp\Support\CircuitBreaker;
 
-$cache = Cache::resilient($primary, $fallback, breaker: new CircuitBreaker(/* limiares */));
+$cache = Cacheer::resilient($primary, $fallback, breaker: new CircuitBreaker(/* limiares */));
 ```
 
 ## Falha fechada, nunca errada

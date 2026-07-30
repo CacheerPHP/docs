@@ -3,9 +3,9 @@
 `remember()` retorna o valor cacheado, ou o calcula uma vez num miss e o guarda.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 $weather = $cache->remember('weather:lisbon', ttl: '15 minutes', callback: function () {
     $json = file_get_contents('https://api.example.com/weather?city=lisbon');

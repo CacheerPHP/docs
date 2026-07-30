@@ -65,6 +65,6 @@ encode into any backend keyspace.
 
 ## Everything is a scope internally
 
-The root cache is just the root scope. `ScopedCache` exposes the same read/write
-API as `Cache` (`get`, `set`, `delete`, `has`, `remember`, `flexible`, batch,
+The root cache is just the root scope. `ScopedCacheer` exposes the same read/write
+API as `Cacheer` (`get`, `set`, `delete`, `has`, `remember`, `flexible`, batch,
 and `scope()` again), so code written against one works against the other.

@@ -3,9 +3,9 @@
 Três níveis de remoção: uma chave, um escopo ou a store inteira.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 // Uma chave.
 $cache->delete('user:123');

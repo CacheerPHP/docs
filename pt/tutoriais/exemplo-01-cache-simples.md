@@ -6,9 +6,9 @@ As quatro operações que você mais usará: guardar, ler, checar, apagar.
 <?php
 require __DIR__ . '/vendor/autoload.php';
 
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache'); // ou Cache::inMemory()
+$cache = Cacheer::file(__DIR__ . '/cache'); // ou Cacheer::inMemory()
 
 // Guardar — o TTL é opcional; null significa para sempre.
 $cache->set('user:123', ['id' => 123, 'name' => 'John Doe'], ttl: '10 minutes');
@@ -31,7 +31,7 @@ Notas:
 - `get()` retorna o valor diretamente, ou o `$default` num miss.
 - Qualquer valor serializável funciona — escalares, arrays e objetos. Veja
   [Valores falsy e null](./exemplo-13-valores-falsy.md) para a única sutileza.
-- Troque `Cache::file(...)` por `Cache::inMemory()`, `Cache::redis(...)` ou
-  `Cache::database(...)` sem mudar o resto do seu código.
+- Troque `Cacheer::file(...)` por `Cacheer::inMemory()`, `Cacheer::redis(...)` ou
+  `Cacheer::database(...)` sem mudar o resto do seu código.
 
 Próximo: [Expiração personalizada (TTL)](./exemplo-02-tempo-expiracao-personalizado.md).

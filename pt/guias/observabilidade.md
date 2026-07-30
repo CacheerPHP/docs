@@ -10,14 +10,14 @@ Embrulhe qualquer store com `InstrumentedStore` via o construtor `instrumented`.
 operação é cronometrada e emitida como um [`CacheEvent`](../api/visao-geral.md) tipado.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Observability\{EventBus, MetricsCollector};
 
 $events  = new EventBus();
 $metrics = new MetricsCollector();
 $events->listen($metrics->record(...));
 
-$cache = Cache::instrumented($store, $events);
+$cache = Cacheer::instrumented($store, $events);
 ```
 
 ## Tipos de evento
@@ -60,7 +60,7 @@ Encaminhe eventos de cache para um dispatcher PSR-14 existente:
 ```php
 use Silviooosilva\CacheerPhp\Observability\Psr14EventDispatcher;
 
-$cache = Cache::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher));
+$cache = Cacheer::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher));
 ```
 
 ## Valores nunca vazam
@@ -70,7 +70,7 @@ $cache = Cache::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher))
 - Se você habilitar captura para depurar, forneça um redator:
 
   ```php
-  $cache = Cache::instrumented($store, $events, captureValues: true, redactor: fn ($v) => '[redacted]');
+  $cache = Cacheer::instrumented($store, $events, captureValues: true, redactor: fn ($v) => '[redacted]');
   ```
 
 - Falhas de listeners são **isoladas**: o `EventBus` embrulha cada listener em um

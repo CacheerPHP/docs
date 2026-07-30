@@ -2,17 +2,17 @@
 
 CacheerPHP 6 has **no ambient configuration**. It never loads `.env`, never
 changes the global timezone, and never creates a database schema because it was
-autoloaded. A `Cache` is exactly, and only, what you construct.
+autoloaded. A `Cacheer` is exactly, and only, what you construct.
 
 ## The common path
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::inMemory();                 // ArrayStore — dependency-free
-$cache = Cache::file('/var/cache/app');     // FileStore — persistent, dependency-free
-$cache = Cache::database($pdo, 'cacheer');  // DatabaseStore — you own the PDO
-$cache = Cache::redis($connection);         // RedisStore — you own the connection
+$cache = Cacheer::inMemory();                 // ArrayStore — dependency-free
+$cache = Cacheer::file('/var/cache/app');     // FileStore — persistent, dependency-free
+$cache = Cacheer::database($pdo, 'cacheer');  // DatabaseStore — you own the PDO
+$cache = Cacheer::redis($connection);         // RedisStore — you own the connection
 ```
 
 That is all most applications need. Everything below is opt-in.
@@ -31,7 +31,7 @@ $pipeline = PipelineConfig::default()
     ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current'))
     ->withMaxValueBytes(2_000_000);
 
-$cache = Cache::file('/var/cache/app', $pipeline);
+$cache = Cacheer::file('/var/cache/app', $pipeline);
 ```
 
 See [Encryption & compression](./encryption-and-compression.md) for details.
@@ -44,15 +44,15 @@ fake clock so expiry and stale windows are deterministic without `sleep()`.
 ```php
 use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-$cache = Cache::file('/var/cache/app', clock: new SystemClock());
+$cache = Cacheer::file('/var/cache/app', clock: new SystemClock());
 ```
 
 ## Full dependency injection
 
-When you need to control everything, construct `Cache` directly:
+When you need to control everything, construct `Cacheer` directly:
 
 ```php
-$cache = new Cache(
+$cache = new Cacheer(
     store:    $store,        // any Store
     clock:    $clock,        // Clock
     executor: $executor,     // DeferredExecutor — after-response stale refresh
@@ -68,10 +68,10 @@ side effect of autoloading. A tiny bootstrap is enough:
 
 ```php
 // bootstrap/cache.php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\Support\PredisConnection;
 
-return Cache::redis(new PredisConnection(new Predis\Client([
+return Cacheer::redis(new PredisConnection(new Predis\Client([
     'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
     'port' => (int) ($_ENV['REDIS_PORT'] ?? 6379),
 ])), prefix: $_ENV['CACHE_PREFIX'] ?? 'app');

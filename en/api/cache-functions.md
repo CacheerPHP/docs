@@ -1,31 +1,31 @@
-# Cache & ScopedCache — method reference
+# Cacheer & ScopedCacheer — method reference
 
-`Silviooosilva\CacheerPhp\Kernel\Cache` is the public entry point. `ScopedCache`
+`Silviooosilva\CacheerPhp\Cacheer` is the public entry point. `ScopedCacheer`
 (returned by `scope()`) exposes the same read/write surface bound to a scope.
 Every key argument accepts a `string` or a [`Key`](./option-builder.md#key).
 
 ## Named constructors
 
-Build a `Cache` for a store without touching the constructor:
+Build a `Cacheer` for a store without touching the constructor:
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-Cache::inMemory(?Clock $clock = null): Cache
-Cache::file(string $directory, ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
-Cache::database(PDO $pdo, string $table = 'cacheer_store', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
-Cache::redis(RedisConnection $connection, string $prefix = 'cacheer', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+Cacheer::inMemory(?Clock $clock = null): Cache
+Cacheer::file(string $directory, ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+Cacheer::database(PDO $pdo, string $table = 'cacheer_store', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
+Cacheer::redis(RedisConnection $connection, string $prefix = 'cacheer', ?PipelineConfig $pipeline = null, ?Clock $clock = null): Cache
 
 // Decorators
-Cache::tiered(Store $l1, Store $l2, ?Ttl $l1MaxTtl = null, ?Clock $clock = null, ?DeferredExecutor $executor = null, ?EventDispatcher $events = null): Cache
-Cache::resilient(Store $primary, Store $fallback, ?CircuitBreaker $breaker = null, ?Clock $clock = null, ?DeferredExecutor $executor = null): Cache
-Cache::instrumented(Store $store, EventDispatcher $events, bool $captureValues = false, ?callable $redactor = null, ?Clock $clock = null): Cache
+Cacheer::tiered(Store $l1, Store $l2, ?Ttl $l1MaxTtl = null, ?Clock $clock = null, ?DeferredExecutor $executor = null, ?EventDispatcher $events = null): Cache
+Cacheer::resilient(Store $primary, Store $fallback, ?CircuitBreaker $breaker = null, ?Clock $clock = null, ?DeferredExecutor $executor = null): Cache
+Cacheer::instrumented(Store $store, EventDispatcher $events, bool $captureValues = false, ?callable $redactor = null, ?Clock $clock = null): Cache
 ```
 
 Or construct directly with any store:
 
 ```php
-$cache = new Cache($store, ?Clock $clock, ?DeferredExecutor $executor, ?EventDispatcher $events);
+$cache = new Cacheer($store, ?Clock $clock, ?DeferredExecutor $executor, ?EventDispatcher $events);
 ```
 
 ## Reading
@@ -125,7 +125,7 @@ public function deleteMany(iterable $keys): bool
 public function clear(): void
 ```
 
-Removes everything in this cache's keyspace. On a `ScopedCache`, `clear()` removes
+Removes everything in this cache's keyspace. On a `ScopedCacheer`, `clear()` removes
 only that scope (requires [`FlushableScopeStore`](./drivers.md#flushablescopestore)).
 
 ## Compute-and-store
@@ -167,10 +167,10 @@ $feed = $cache->flexible('feed', fresh: 30, stale: 300, callback: fn () => build
 ### `scope()`
 
 ```php
-public function scope(string|Scope $scope): ScopedCache
+public function scope(string|Scope $scope): ScopedCacheer
 ```
 
-Returns a [`ScopedCache`](../guides/scopes.md) — an isolated keyspace with the
+Returns a [`ScopedCacheer`](../guides/scopes.md) — an isolated keyspace with the
 same API. Scopes nest: `$cache->scope('a')->scope('b')`.
 
 ```php
@@ -182,7 +182,7 @@ $reports->clear(); // clears only the "reports" scope
 ### `withPolicy()`
 
 ```php
-public function withPolicy(CachePolicy $policy): PolicyCache
+public function withPolicy(CachePolicy $policy): PolicyCacheer
 ```
 
 Wraps the cache with a [`CachePolicy`](../guides/policies.md) (default TTL, jitter,
@@ -198,8 +198,7 @@ $cache = $cache->withPolicy(
 ## Capabilities beyond the kernel
 
 Atomic counters, tags, touch, prune, and inspection live on the **store**
-capability interfaces, not on `Cache`. Reach them through the store, or through
-the [`LegacyCacheer`](../updating/index.md) bridge:
+capability interfaces, not on `Cacheer`. Reach them through the store:
 
 ```php
 $store->increment(Key::named('visits'));        // AtomicStore

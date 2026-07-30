@@ -2,16 +2,16 @@
 
 **Versão atual: 6.0** | PHP 8.3+ | [Guia de atualização](./atualizacao/index.md)
 
-O CacheerPHP 6 é um cache **baseado em instâncias**: um núcleo `Cache` enxuto
+O CacheerPHP 6 é um cache **baseado em instâncias**: um núcleo `Cacheer` enxuto
 sobre um contrato `Store` mínimo de quatro métodos, com tudo o mais — lotes, tags,
 locks, contadores atômicos, camadas, resiliência, criptografia — como uma
 **capacidade opcional** que você habilita. Não há estado global nem efeito
-colateral no autoload. Código v5 continua funcionando pela ponte `LegacyCacheer`.
+colateral no autoload. A v5 segue na própria linha `5.x` durante a migração.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 $cache->set('user:42', $user, ttl: '10 minutes');
 $user = $cache->get('user:42');
@@ -34,7 +34,7 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 
 ## Novidades da v6.0
 
-- **Núcleo baseado em instâncias.** `Cache` explícito e `ScopedCache` imutável
+- **Núcleo baseado em instâncias.** `Cacheer` explícito e `ScopedCacheer` imutável
   sobre `Key`, `Scope`, `Ttl` e `CacheEntry` tipados; o tempo é um `Clock` injetado.
 - **Núcleo pequeno, capacidades honestas.** Uma store implementa quatro métodos; o
   resto é declarado por interface e verificado em tempo de execução.
@@ -50,13 +50,14 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
   [rotação de chaves](./guias/criptografia-e-compressao.md).
 - **Padrões e ferramentas.** Adaptadores [PSR-16 e PSR-6](./api/psr16-adapter.md),
   log PSR-3, ponte PSR-14 e uma [CLI `cacheer`](./guias/cli.md).
-- **Migração.** Ponte `LegacyCacheer`, conjunto Rector opcional e reescrita na
-  leitura de payloads v5. Veja o [guia de atualização](./atualizacao/index.md).
+- **Migração.** Conjunto Rector opcional mais reescrita na leitura de payloads v5
+  — a renomeação é a migração, sem shim de runtime. Veja o
+  [guia de atualização](./atualizacao/index.md).
 
 ## Breaking changes em resumo
 
-- A fachada estática/global não faz parte do núcleo — use um `Cache` injetado ou a
-  ponte `LegacyCacheer`.
+- A fachada estática/global foi removida — construa e injete um `Cacheer`. Sem shim
+  v5 drop-in; migre com o Rector + tabela de mapeamento, ou fique em `^5.2`.
 - `get()` não recebe mais TTL de leitura; namespaces posicionais viram `scope()`; o
   sucesso é o retorno ou `entry()->isHit()`, não estado mutável.
 - PHP mínimo é **8.3**. Clientes de driver e extensões são opcionais.

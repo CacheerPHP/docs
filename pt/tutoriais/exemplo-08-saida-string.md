@@ -4,7 +4,7 @@ Stores persistentes codificam valores por um pipeline que você descreve com um
 `PipelineConfig`. Aqui está uma store que comprime e criptografa cada valor.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Config\PipelineConfig;
 use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
 
@@ -12,7 +12,7 @@ $pipeline = PipelineConfig::default()
     ->withGzip()                                                     // comprime payloads grandes
     ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current')); // AES-256-GCM
 
-$cache = Cache::file(__DIR__ . '/cache', $pipeline);
+$cache = Cacheer::file(__DIR__ . '/cache', $pipeline);
 
 $cache->set('token', 'sensitive-data');   // guardado comprimido + criptografado
 echo $cache->get('token');                // 'sensitive-data' — descriptografado de forma transparente

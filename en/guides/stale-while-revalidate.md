@@ -39,10 +39,10 @@ The refresh runs through the injected **deferred executor**:
   neither the stale read nor the refresh.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Support\AfterResponseDeferredExecutor;
 
-$cache = new Cache($store, executor: new AfterResponseDeferredExecutor());
+$cache = new Cacheer($store, executor: new AfterResponseDeferredExecutor());
 ```
 
 CacheerPHP never calls a refresh "background" unless a deferred executor that

@@ -81,7 +81,7 @@ final class MyStoreConformanceTest extends StoreConformance
 }
 ```
 
-If it passes, your store composes with `Cache`, scopes, tiering, resilience, the
+If it passes, your store composes with `Cacheer`, scopes, tiering, resilience, the
 PSR adapters, and the CLI exactly like the built-ins.
 
 ## 5. Getting listed as compatible

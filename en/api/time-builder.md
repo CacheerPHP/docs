@@ -58,7 +58,7 @@ interface Clock
 ```php
 use Silviooosilva\CacheerPhp\Support\SystemClock;
 
-$cache = Cache::file('/var/cache', clock: new SystemClock());
+$cache = Cacheer::file('/var/cache', clock: new SystemClock());
 ```
 
 Because the clock is injected everywhere (stores, decorators, policies, locks,

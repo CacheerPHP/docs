@@ -23,7 +23,7 @@ $key->within(Scope $scope): self  // a copy bound to $scope
 $key->identity(): string          // collision-free internal identity
 ```
 
-Every `Cache` method accepts a plain string too; it is wrapped as
+Every `Cacheer` method accepts a plain string too; it is wrapped as
 `Key::named($string)` in the caller's scope.
 
 ## `Scope`
@@ -60,7 +60,7 @@ Ttl::forever(): self
 Ttl::seconds(int): self            // must be > 0
 Ttl::minutes(int) / ::hours(int) / ::days(int) / ::weeks(int): self
 Ttl::until(DateTimeInterface $when, Clock $clock): self
-Ttl::from(Ttl|DateInterval|int|string|null): self  // the normalizer Cache uses
+Ttl::from(Ttl|DateInterval|int|string|null): self  // the normalizer Cacheer uses
 
 $ttl->isForever(): bool
 $ttl->inSeconds(): ?int            // null when forever

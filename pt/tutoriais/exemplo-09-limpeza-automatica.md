@@ -8,11 +8,11 @@ Stores que implementam `PrunableStore` (as quatro nativas) varrem entradas expir
 reportam quantas foram removidas.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\FileStore;
 
 $store = new FileStore(__DIR__ . '/cache');
-$cache = new Cache($store);
+$cache = new Cacheer($store);
 
 // ... o tempo passa, entradas expiram ...
 

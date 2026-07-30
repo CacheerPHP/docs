@@ -9,9 +9,9 @@ When many requests miss the same key at once, only one computes; the rest wait a
 read its result.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 $value = $cache->remember('expensive', ttl: '5 minutes', callback: function () {
     return run_expensive_query(); // runs once across concurrent workers
@@ -43,7 +43,7 @@ refresh:
 ```php
 use Silviooosilva\CacheerPhp\Support\AfterResponseDeferredExecutor;
 
-$cache = new Cache($store, executor: new AfterResponseDeferredExecutor());
+$cache = new Cacheer($store, executor: new AfterResponseDeferredExecutor());
 ```
 
 See [Remember & locks](../guides/remember-and-locks.md) and

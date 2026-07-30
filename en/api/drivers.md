@@ -96,9 +96,9 @@ provide, so composition never loses a feature.
   and emits typed events; values are never captured unless you opt in.
 
 ```php
-$cache = Cache::tiered(new ArrayStore($clock), $redisStore);
-$cache = Cache::resilient($primary, $fallback);
-$cache = Cache::instrumented($store, $events);
+$cache = Cacheer::tiered(new ArrayStore($clock), $redisStore);
+$cache = Cacheer::resilient($primary, $fallback);
+$cache = Cacheer::instrumented($store, $events);
 ```
 
 ## Writing your own

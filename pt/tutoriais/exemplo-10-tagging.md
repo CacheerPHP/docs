@@ -5,12 +5,12 @@ grupo inteiro de uma vez. Tagging é uma capacidade da store (`TaggableStore`), 
 você a acessa pela store.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Kernel\Key;
 use Silviooosilva\CacheerPhp\Stores\FileStore;
 
 $store = new FileStore(__DIR__ . '/cache');
-$cache = new Cache($store);
+$cache = new Cacheer($store);
 
 $cache->set('product:1', $p1);
 $cache->set('product:2', $p2);

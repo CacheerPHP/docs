@@ -5,9 +5,9 @@ Read, write, and delete many keys at once. On stores that implement `BatchStore`
 instead of a loop.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::file(__DIR__ . '/cache');
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 // Write many under one TTL (keys must be strings).
 $cache->setMany([

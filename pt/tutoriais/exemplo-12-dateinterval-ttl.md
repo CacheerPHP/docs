@@ -3,9 +3,9 @@
 Qualquer argumento de TTL aceita um `DateInterval` nativo do PHP.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cache::inMemory();
+$cache = Cacheer::inMemory();
 
 $cache->set('a', $v, ttl: new DateInterval('PT30M'));   // 30 minutos
 $cache->set('b', $v, ttl: new DateInterval('P1D'));     // 1 dia

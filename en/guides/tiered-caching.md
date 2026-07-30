@@ -5,10 +5,10 @@ Reads hit local memory first and only fall through to the network on a miss; the
 value is then promoted back into L1 so the next read is fast.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Stores\ArrayStore;
 
-$cache = Cache::tiered(
+$cache = Cacheer::tiered(
     l1: new ArrayStore($clock),   // per-process, nanosecond reads
     l2: $redisStore,              // shared across the fleet
 );
@@ -38,7 +38,7 @@ so a long-lived L2 entry doesn't get pinned in stale local memory:
 ```php
 use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-$cache = Cache::tiered($l1, $l2, l1MaxTtl: Ttl::seconds(10));
+$cache = Cacheer::tiered($l1, $l2, l1MaxTtl: Ttl::seconds(10));
 ```
 
 ## Cross-worker coherence
@@ -62,7 +62,7 @@ Promotions are emitted as `cache.promotion` events when you wrap the tiered cach
 with instrumentation:
 
 ```php
-$cache = Cache::tiered($l1, $l2, events: $events);
+$cache = Cacheer::tiered($l1, $l2, events: $events);
 ```
 
 See [Observability](./observability.md).

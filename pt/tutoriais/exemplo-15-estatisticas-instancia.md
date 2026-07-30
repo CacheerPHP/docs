@@ -6,7 +6,7 @@
 Embrulhe uma store com `instrumented`, anexe um `MetricsCollector` e leia um snapshot.
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Cache;
+use Silviooosilva\CacheerPhp\Cacheer;
 use Silviooosilva\CacheerPhp\Observability\{EventBus, MetricsCollector};
 use Silviooosilva\CacheerPhp\Stores\ArrayStore;
 use Silviooosilva\CacheerPhp\Support\SystemClock;
@@ -15,7 +15,7 @@ $events  = new EventBus();
 $metrics = new MetricsCollector();
 $events->listen($metrics->record(...));
 
-$cache = Cache::instrumented(new ArrayStore(new SystemClock()), $events);
+$cache = Cacheer::instrumented(new ArrayStore(new SystemClock()), $events);
 
 $cache->set('a', 1);
 $cache->get('a');       // hit

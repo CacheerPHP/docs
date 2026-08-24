@@ -19,7 +19,7 @@ $cache = Cacheer::redis($connection);            // RedisStore (injete a conexã
 ```
 
 Cada construtor persistente aceita um `PipelineConfig` e `Clock` opcionais. Veja
-[Cache e ScopedCacheer](./funcoes-cache.md#construtores-nomeados) para as assinaturas
+[Cacheer](./funcoes-cache.md#construtores-nomeados) para as assinaturas
 completas, incluindo os decorators `tiered`, `resilient` e `instrumented`.
 
 ## `Cacheer::build()` — o builder fluente
@@ -48,8 +48,8 @@ $cache = Cacheer::build()
 | Política | `defaultTtl($ttl)`, `jitter($fraction)`, `negativeTtl($ttl)`, `serveStaleOnError($grace)` |
 | Outros | `clock($clock)` |
 
-`create()` retorna um `Cacheer` simples, ou um `PolicyCacheer` quando algum método
-de política foi usado (ambos expõem a mesma superfície de leitura/escrita).
+`create()` retorna um `Cacheer` — já com a policy vinculada quando algum método de
+política foi usado.
 
 ## `PipelineConfig` — o pipeline de armazenamento
 

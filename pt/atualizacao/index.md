@@ -29,27 +29,51 @@ O schema do banco **nunca** é criado implicitamente — execute
 
 ## 3. Mapeamento de métodos
 
+Todo verbo da v5 abaixo é um método do cache na v6 — você nunca precisa alcançar a
+store por trás dele, e o escopo em que você está é aplicado para você.
+
 | v5 | v6 | Observações |
 |---|---|---|
 | `putCache($k, $v, $ns, $ttl)` | `set($k, $v, $ttl)` | Namespace vira `scope($ns)->set(...)` |
-| `forever($k, $v)` | `set($k, $v, null)` | TTL `null` = para sempre |
 | `getCache($k, $ns, $ttl)` | `get($k)` | TTL de leitura removido |
-| `clearCache($k, $ns)` | `delete($k)` | `scope($ns)->delete(...)` |
+| `clearCache($k, $ns)` / `forget()` | `delete($k)` | `scope($ns)->delete(...)` |
 | `flushCache()` | `clear()` | Limitado ao keyspace configurado |
-| `getAndForget()` / `pull()` | `get($k)` e depois `delete($k)` | a v6 não tem `pull()`; duas chamadas |
-| `has()` / `missing()` | `has()` | — |
-| namespace posicional | `scope('name')` | Retorna um cache com escopo |
-| `tag($tag, ...$keys)` | `TaggableStore::tag()` | Capacidade, não núcleo |
-| `increment()` / `decrement()` | `AtomicStore::increment()` | Capacidade, não núcleo |
-| `isSuccess()` | `entry()->isHit()` ou retorno | Removido do estado do núcleo |
+| `forever($k, $v)` | `forever($k, $v)` | Ou `set($k, $v, null)` |
+| `add($k, $v, $ns, $ttl)` | `add($k, $v, $ttl)` | Serializado por lock onde a store sabe travar |
+| `getAndForget()` / `pull()` | `pull($k, $default = null)` | Lê e remove em uma chamada |
+| `has()` | `has()` | — |
+| `missing()` | `missing()` | — |
+| `getMany()` / `putMany()` | `many()` / `setMany()` | — |
+| namespace posicional | `scope('name')` ou `in('name')` | Retorna um cache do mesmo tipo |
+| `tag($tag, ...$keys)` | `tag($key, ...$tags)` | Por chave; tags têm namespace por escopo |
+| `flushTag($tag)` | `flushTag($tag)` | Retorna quantas foram removidas |
+| `increment()` / `decrement()` | `increment()` / `decrement()` | Ambos mantidos |
+| `renewCache($k, $ttl, $ns)` | `touch($k, $ttl)` | Estende o TTL, preserva o valor |
+| `getAll($ns)` | `entries()` | Escopo aplicado; entrega entradas com metadados |
+| `lock($name, $ttl)` | `lock($name, $ttl)` | Nomes de lock têm namespace por escopo |
+| `rememberForever()` | `rememberForever()` | — |
 | `remember()` / `flexible()` | `remember()` / `flexible()` | Mesma intenção, clock injetado |
+| `stats()` | `stats()` | Store, escopo, policy, capacidades reais |
+| `useFormatter()` | `formatted()` | Uma visão imutável; leituras base seguem cruas |
+| `appendCache()` | ler → mesclar → `set()` | Explícito; use `lock()` se houver concorrência |
+| `isSuccess()` / `getMessage()` | `entry()->isHit()` ou retorno | Removido do estado do núcleo |
+| `Cacheer::putCache(...)` estático | injete uma instância de `Cache` | Sem estado global na v6 |
+
+As linhas baseadas em capacidade (`increment`, `touch`, `tag`, `flushTag`, `lock`,
+`entries`, `prune`) lançam `UnsupportedCapabilityException` em uma store que não as
+honra. Todas as stores nativas honram todas; se você suporta backends plugáveis,
+pergunte antes com `$cache->supports(AtomicStore::class)`.
 
 ### Renomeações automáticas (Rector)
 
 Um conjunto Rector opcional acompanha o pacote em `rector.php`. Ele renomeia os
-métodos v5 diretos em `Cacheer` (`putCache`→`set`, `getCache`→`get`, …); **não**
-reescreve a construção, não move o argumento de namespace para `scope()` nem remove
-o TTL de leitura — faça isso manualmente.
+métodos v5 diretos em `Cacheer` (`putCache`→`set`, `getCache`→`get`,
+`renewCache`→`touch`, `getAndForget`→`pull`, …). Os verbos que a v6 manteve — `add`,
+`forever`, `missing`, `increment`, `decrement`, `tag`, `flushTag`, `lock`,
+`rememberForever`, `stats` — não precisam de regra alguma.
+
+Ele **não** reescreve a construção, não move o argumento de namespace para `scope()`
+nem remove o TTL de leitura — faça isso manualmente.
 
 ```sh
 composer require rector/rector --dev

@@ -43,7 +43,7 @@ interface Lock
 ```php
 use Silviooosilva\CacheerPhp\Kernel\Ttl;
 
-$lock = $store->lock('import:catalog', Ttl::seconds(30));
+$lock = $cache->lock('import:catalog', 30);
 
 if ($lock->acquire()) {
     try {
@@ -57,7 +57,7 @@ if ($lock->acquire()) {
 Bloqueando com timeout:
 
 ```php
-$lock = $store->lock('nightly-job', Ttl::minutes(5));
+$lock = $cache->lock('nightly-job', '5 minutes');
 
 if (! $lock->block(10.0)) {
     return; // outro worker o mantém; pule esta execução
@@ -76,4 +76,10 @@ Quando a store é `LockingStore`, `remember()` fica automaticamente à prova de
 estampede: num miss concorrente, um chamador adquire o lock e calcula enquanto os
 outros bloqueiam brevemente e leem o valor recém-gravado. Se o lock não puder ser
 adquirido na janela interna, os chamadores caem para calcular em vez de bloquear
-para sempre. Veja o [guia de Remember e locks](../guias/remember-e-locks.md).
+para sempre.
+
+Quando a store *não* sabe travar — incluindo um decorator em volta de uma que não
+sabe — `remember()` degrada para um cálculo simples em vez de falhar. O kernel decide
+isso com `Capabilities::supports()`, nunca `instanceof`; veja
+[Stores e capacidades](./drivers.md). Veja também o
+[guia de Remember e locks](../guias/remember-e-locks.md).

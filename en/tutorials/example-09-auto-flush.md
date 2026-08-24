@@ -8,14 +8,21 @@ entries and report how many were removed.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;
-use Silviooosilva\CacheerPhp\Stores\FileStore;
 
-$store = new FileStore(__DIR__ . '/cache');
-$cache = new Cacheer($store);
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 // ... time passes, entries expire ...
 
-$removed = $store->prune();  // number of expired entries deleted
+$removed = $cache->prune();  // number of expired entries deleted
+```
+
+To see what is still live first, walk the keyspace — `entries()` is scoped to the
+cache you call it on:
+
+```php
+foreach ($cache->in('reports')->entries() as $entry) {
+    echo $entry->key()->value(), ' → ', $entry->remainingTtl($clock), "\n";
+}
 ```
 
 Run it from the CLI on a cron instead of in your request path:

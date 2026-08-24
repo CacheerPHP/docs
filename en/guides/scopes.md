@@ -8,6 +8,7 @@ you can clear on its own.
 
 ```php
 $reports = $cache->scope('reports');
+$reports = $cache->in('reports');    // in() is an alias — pick whichever reads better
 
 $reports->set('daily', $rows);
 $reports->get('daily');          // the rows
@@ -63,8 +64,36 @@ encode into any backend keyspace.
   entry can carry many tags, and you invalidate by tag. Use them for
   relationships that cut across scopes (e.g. everything touching `user:42`).
 
+## Scope applies to everything, not just get/set
+
+Counters, tags, and locks are scoped too, so two scopes cannot collide:
+
+```php
+$cache->in('tenant-a')->increment('signups', 1, initial: 0);
+$cache->in('tenant-b')->increment('signups', 5, initial: 0);
+// → 1 and 5, in separate keyspaces
+
+$cache->in('tenant-a')->tag('p1', 'products');
+$cache->in('tenant-b')->tag('p1', 'products');
+$cache->in('tenant-a')->flushTag('products');   // leaves tenant-b alone
+
+$a = $cache->in('tenant-a')->lock('nightly-import', 300);
+$b = $cache->in('tenant-b')->lock('nightly-import', 300);
+// both acquire — same name, different scopes
+```
+
 ## Everything is a scope internally
 
-The root cache is just the root scope. `ScopedCacheer` exposes the same read/write
-API as `Cacheer` (`get`, `set`, `delete`, `has`, `remember`, `flexible`, batch,
-and `scope()` again), so code written against one works against the other.
+The root cache is just the root scope, and scoping returns the **same type**:
+
+```php
+$cache->scope('reports') instanceof Cacheer;   // true
+```
+
+So a scoped cache can never silently lack part of the API — it has `remember()`,
+`flexible()`, batch reads, capabilities, `withPolicy()`, and `formatted()` just
+like the root cache. Ask which scope you are in with `boundScope()`:
+
+```php
+$cache->in('tenant:42')->in('reports')->boundScope();   // "tenant:42/reports"
+```

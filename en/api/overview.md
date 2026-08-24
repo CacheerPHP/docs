@@ -7,10 +7,11 @@ envelope.
 
 ```text
 Public API
-  Cacheer / ScopedCacheer / PolicyCacheer
+  Cache (interface)  <-  Cacheer  (+ FormattedCacheer view)
+    scope / policy are state on the object, not extra types
           |
 Core value objects
-  Key / Scope / Ttl / CacheEntry / Clock
+  Key / Scope / Ttl / CacheEntry / Clock / Capabilities
           |
 Decorators (optional, composable)
   TieredStore / ResilientStore / InstrumentedStore
@@ -29,12 +30,13 @@ Storage pipeline
 
 | Namespace | Contents |
 |---|---|
-| `Kernel\` | `Cacheer`, `ScopedCacheer`, `PolicyCacheer`, and the value objects `Key`, `Scope`, `Ttl`, `CacheEntry` |
-| `Contracts\` | `Store` and the capability interfaces (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`), plus `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
+| root | `Cacheer` — the one cache class |
+| `Kernel\` | The value objects `Key`, `Scope`, `Ttl`, `CacheEntry`, plus `Capabilities` (the honest capability check) |
+| `Contracts\` | `Cache` (what applications type-hint), `Store` and the capability interfaces (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`, `CapabilityAware`), plus `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
 | `Stores\` | `ArrayStore`, `FileStore`, `DatabaseStore`, `RedisStore`, and the decorators `TieredStore`, `ResilientStore`, `InstrumentedStore` |
 | `Storage\` | `Envelope`, `EnvelopeCodec`, serializers, compression, encryption, key encoding, and the v5 reader |
 | `Config\` | `PipelineConfig`, `CachePolicy` |
-| `Support\` | `SystemClock`, `CircuitBreaker`, deferred executors |
+| `Support\` | `SystemClock`, `CircuitBreaker`, deferred executors, `CacheDataFormatter`, `FormattedCacheer` |
 | `Observability\` | `CacheEvent`, `CacheEventType`, `EventBus`, `MetricsCollector`, PSR-3/PSR-14 bridges |
 | `Psr\` | `Psr16Cache`, `Psr6Pool`, `Psr6Item` |
 | `Console\` | the `cacheer` operations CLI |
@@ -55,7 +57,8 @@ interface Store
 
 Everything else — batching, tags, locks, atomic counters, touch, prune, inspect,
 scoped flush — is an **optional capability** the store declares by implementing an
-interface. See [Stores & capabilities](./drivers.md).
+interface. You still call them on the cache, which applies the scope and checks
+the capability for you. See [Stores & capabilities](./drivers.md).
 
 ## Reading vs. inspecting
 

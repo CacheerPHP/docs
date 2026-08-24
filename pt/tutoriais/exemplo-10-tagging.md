@@ -1,32 +1,47 @@
 # Tagging
 
 Tags são rótulos transversais: uma entrada pode ter muitas tags, e você invalida um
-grupo inteiro de uma vez. Tagging é uma capacidade da store (`TaggableStore`), então
-você a acessa pela store.
+grupo inteiro de uma vez. Tagging é uma capacidade da store (`TaggableStore`) que
+você chama **no cache**, então o escopo deste cache é aplicado para você.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;
-use Silviooosilva\CacheerPhp\Kernel\Key;
-use Silviooosilva\CacheerPhp\Stores\FileStore;
 
-$store = new FileStore(__DIR__ . '/cache');
-$cache = new Cacheer($store);
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 $cache->set('product:1', $p1);
 $cache->set('product:2', $p2);
 
-// Associe chaves já armazenadas a uma tag.
-$store->tag(Key::named('product:1'), 'products', 'catalog');
-$store->tag(Key::named('product:2'), 'products');
+// Associa chaves já armazenadas a uma tag.
+$cache->tag('product:1', 'products', 'catalog');
+$cache->tag('product:2', 'products');
 
-// Invalide tudo com a tag "products".
-$removed = $store->clearTag('products'); // número de entradas removidas
+// Invalida tudo com a tag "products".
+$removed = $cache->flushTag('products'); // número de entradas removidas
+```
+
+## Tags têm namespace por escopo
+
+Dois escopos podem usar o mesmo nome de tag sem limpar um ao outro:
+
+```php
+$cache->in('tenant-a')->set('p1', $a);
+$cache->in('tenant-a')->tag('p1', 'products');
+
+$cache->in('tenant-b')->set('p1', $b);
+$cache->in('tenant-b')->tag('p1', 'products');
+
+$cache->in('tenant-a')->flushTag('products');
+$cache->in('tenant-b')->get('p1');   // continua $b
 ```
 
 Notas:
 
-- Tagging associa chaves **existentes** a uma tag; guarde o valor primeiro.
-- Índices de tag são metadados best-effort: uma chave que expira antes de a tag ser
-  limpa é simplesmente um no-op.
+- Tagging associa chaves **existentes** a uma tag; armazene o valor primeiro.
+- Índices de tag são metadados de melhor esforço: uma chave que expira antes da tag
+  ser limpa é simplesmente um no-op.
+- Em uma store não taggeável, `tag()`/`flushTag()` lançam
+  `UnsupportedCapabilityException`. Pergunte antes com
+  `$cache->supports(TaggableStore::class)` se o seu backend é plugável.
 - Para separação estrutural (funcionalidades, tenants), prefira
   [escopos](./exemplo-04-namespaces.md); use tags para relações que cruzam escopos.

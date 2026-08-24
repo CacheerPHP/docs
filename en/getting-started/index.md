@@ -79,8 +79,39 @@ own. See the [Scopes guide](../guides/scopes.md).
 
 ```php
 $cache->scope('reports')->set('daily', $rows);
-$cache->scope('billing')->set('daily', $invoice); // independent entry
+$cache->in('billing')->set('daily', $invoice);    // in() is an alias of scope()
 $cache->scope('reports')->clear();                // clears only that scope
+```
+
+Scoping returns another `Cacheer`, so a scoped cache keeps the whole API — and the
+scope applies to counters, tags, and locks too, not just `get`/`set`.
+
+## Counters, tags, locks, TTL renewal
+
+Capabilities are implemented by the store and called on the cache, so this cache's
+scope is applied for you:
+
+```php
+$cache->increment('visits');                  // atomic counter
+$cache->decrement('stock', 5, initial: 100);
+$cache->touch('session:1', '1 hour');         // renew a TTL, keep the value
+$cache->tag('product:1', 'products');
+$cache->flushTag('products');
+$lock = $cache->lock('nightly-import', 300);
+
+// Pluggable backend? Ask first — the answer is honest through decorators too.
+$cache->supports(\Silviooosilva\CacheerPhp\Contracts\AtomicStore::class);
+```
+
+## Everyday verbs
+
+```php
+$cache->forever('config', $config);                     // no expiry
+$cache->add('lock:job', 1, ttl: 60);                    // store only if absent
+$cache->pull('flash');                                  // read once, then remove
+$cache->missing('user:1');                              // inverse of has()
+$cache->rememberForever('version', fn () => compute());
+$cache->stats();                                        // store, scope, capabilities
 ```
 
 ## Compute-once and stale-while-revalidate

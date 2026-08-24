@@ -34,12 +34,19 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 
 ## Novidades da v6.0
 
-- **Núcleo baseado em instâncias.** `Cacheer` explícito e `ScopedCacheer` imutável
-  sobre `Key`, `Scope`, `Ttl` e `CacheEntry` tipados; o tempo é um `Clock` injetado.
+- **Núcleo baseado em instâncias.** Um único `Cacheer` explícito e imutável por trás
+  da interface `Cache`, sobre `Key`, `Scope`, `Ttl` e `CacheEntry` tipados; o tempo
+  é um `Clock` injetado.
+- **Um único tipo de cache.** Escopo e policy são estado do objeto, então toda
+  combinação compõe: `$cache->in('billing')->withPolicy($p)->increment('hits')`.
 - **Núcleo pequeno, capacidades honestas.** Uma store implementa quatro métodos; o
-  resto é declarado por interface e verificado em tempo de execução.
+  resto é declarado por interface, e `$cache->supports(...)` responde com honestidade
+  mesmo através de decorators.
+- **Capacidades no cache.** `increment`, `decrement`, `touch`, `tag`, `flushTag`,
+  `lock`, `entries` e `prune` são métodos do cache, com o escopo aplicado — sem
+  precisar alcançar a store por trás dele.
 - **Escopos** substituem namespaces por string por keyspaces isolados que você
-  limpa separadamente.
+  limpa separadamente — e valem também para contadores, tags e locks.
 - **Decorators componíveis.** [Camadas](./guias/cache-em-camadas.md) (L1/L2),
   [resiliente](./guias/store-resiliente.md) (fallback com circuit breaker) e
   [instrumentado](./guias/observabilidade.md) (eventos tipados + métricas).
@@ -58,8 +65,13 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 
 - A fachada estática/global foi removida — construa e injete um `Cacheer`. Sem shim
   v5 drop-in; migre com o Rector + tabela de mapeamento, ou fique em `^5.2`.
-- `get()` não recebe mais TTL de leitura; namespaces posicionais viram `scope()`; o
-  sucesso é o retorno ou `entry()->isHit()`, não estado mutável.
+- `get()` não recebe mais TTL de leitura; namespaces posicionais viram `scope()`
+  (ou seu alias `in()`); o sucesso é o retorno ou `entry()->isHit()`, não estado
+  mutável.
+- Os verbos familiares da v5 continuam aqui: `forever()`, `rememberForever()`,
+  `missing()`, `add()`, `pull()` (o `getAndForget` da v5),
+  `increment()`/`decrement()`, `touch()` (o `renewCache` da v5), `tag()`/`flushTag()`,
+  `lock()` e `stats()`.
 - PHP mínimo é **8.3**. Clientes de driver e extensões são opcionais.
 
 ---

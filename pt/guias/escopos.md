@@ -8,6 +8,7 @@ tipado e aninhável que você pode limpar separadamente.
 
 ```php
 $reports = $cache->scope('reports');
+$reports = $cache->in('reports');    // in() é um alias — use o que ler melhor
 
 $reports->set('daily', $rows);
 $reports->get('daily');          // as linhas
@@ -63,8 +64,37 @@ barras ou caracteres de controle (`InvalidScopeException`).
   pode ter muitas tags, e você invalida por tag. Use-as para relações que cruzam
   escopos.
 
+## O escopo vale para tudo, não só get/set
+
+Contadores, tags e locks também têm escopo, então dois escopos não colidem:
+
+```php
+$cache->in('tenant-a')->increment('signups', 1, initial: 0);
+$cache->in('tenant-b')->increment('signups', 5, initial: 0);
+// → 1 e 5, em keyspaces separados
+
+$cache->in('tenant-a')->tag('p1', 'products');
+$cache->in('tenant-b')->tag('p1', 'products');
+$cache->in('tenant-a')->flushTag('products');   // não afeta o tenant-b
+
+$a = $cache->in('tenant-a')->lock('nightly-import', 300);
+$b = $cache->in('tenant-b')->lock('nightly-import', 300);
+// ambos adquirem — mesmo nome, escopos diferentes
+```
+
 ## Tudo é um escopo internamente
 
-O cache raiz é apenas o escopo raiz. `ScopedCacheer` expõe a mesma API de
-leitura/escrita que `Cacheer` (`get`, `set`, `delete`, `has`, `remember`, `flexible`,
-lotes e `scope()` de novo).
+O cache raiz é apenas o escopo raiz, e criar um escopo retorna o **mesmo tipo**:
+
+```php
+$cache->scope('reports') instanceof Cacheer;   // true
+```
+
+Ou seja, um cache com escopo nunca perde parte da API silenciosamente — ele tem
+`remember()`, `flexible()`, leituras em lote, capacidades, `withPolicy()` e
+`formatted()` como o cache raiz. Pergunte em qual escopo você está com
+`boundScope()`:
+
+```php
+$cache->in('tenant:42')->in('reports')->boundScope();   // "tenant:42/reports"
+```

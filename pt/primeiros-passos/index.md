@@ -79,8 +79,39 @@ separadamente. Veja o [guia de Escopos](../guias/escopos.md).
 
 ```php
 $cache->scope('reports')->set('daily', $rows);
-$cache->scope('billing')->set('daily', $invoice); // entrada independente
+$cache->in('billing')->set('daily', $invoice);    // in() é um alias de scope()
 $cache->scope('reports')->clear();                // limpa apenas esse escopo
+```
+
+`scope()` retorna outro `Cacheer`, então um cache com escopo mantém a API inteira — e
+o escopo vale também para contadores, tags e locks, não só `get`/`set`.
+
+## Contadores, tags, locks, renovação de TTL
+
+Capacidades são implementadas pela store e chamadas no cache, então o escopo deste
+cache é aplicado para você:
+
+```php
+$cache->increment('visits');                  // contador atômico
+$cache->decrement('stock', 5, initial: 100);
+$cache->touch('session:1', '1 hour');         // renova o TTL, preserva o valor
+$cache->tag('product:1', 'products');
+$cache->flushTag('products');
+$lock = $cache->lock('nightly-import', 300);
+
+// Backend plugável? Pergunte antes — a resposta é honesta mesmo com decorators.
+$cache->supports(\Silviooosilva\CacheerPhp\Contracts\AtomicStore::class);
+```
+
+## Verbos do dia a dia
+
+```php
+$cache->forever('config', $config);                     // sem expiração
+$cache->add('lock:job', 1, ttl: 60);                    // armazena só se ausente
+$cache->pull('flash');                                  // lê uma vez e remove
+$cache->missing('user:1');                              // inverso de has()
+$cache->rememberForever('version', fn () => compute());
+$cache->stats();                                        // store, escopo, capacidades
 ```
 
 ## Cálculo único e stale-while-revalidate

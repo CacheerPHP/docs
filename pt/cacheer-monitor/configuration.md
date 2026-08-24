@@ -25,6 +25,7 @@ cp vendor/cacheerphp/monitor/.env.example .env
 | `CACHEER_MONITOR_EVENTS` | *(diretório temporário)* | Caminho absoluto, ou relativo à raiz do projeto, para o ficheiro de eventos JSONL. |
 | `CACHEER_MONITOR_TOKEN` | — | Quando definido, as ações destrutivas da API (`clear`, `cleanup-rotated`) exigem este valor no cabeçalho `X-Monitor-Token`. |
 | `CACHEER_MONITOR_CAPTURE_VALUES` | `false` | Quando `true`, a camada de instrumentação grava uma pré-visualização dos valores em cache no payload de cada evento. Ver [Captura de Valores](#captura-de-valores) abaixo. |
+| `CACHEER_MONITOR_AUTO_REGISTER` | `true` | Defina como `false` para impedir que a ponte de autoload registe um listener, permitindo registar o seu |
 | `CACHEER_MONITOR_STREAM_TIMEOUT` | `30` | Quanto tempo (segundos) a ligação SSE `/api/events/stream` fica aberta antes de o cliente ter de se religar. |
 | `CACHEER_MONITOR_PREVIEW_BYTES` | `2048` | Tamanho máximo (bytes) da pré-visualização serializada escrita em cada evento. Valores maiores são truncados. |
 | `CACHEER_MONITOR_REDACT_KEYS` | — | Lista separada por vírgulas de campos adicionais a ocultar nas pré-visualizações. Campos ocultados por omissão: `password`, `passwd`, `pwd`, `secret`, `token`, `access_token`, `refresh_token`, `authorization`, `api_key`, `apikey`, `private_key`, `client_secret`, `cookie`, `session`. |

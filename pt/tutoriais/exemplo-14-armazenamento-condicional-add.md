@@ -77,4 +77,4 @@ $ok = $cache->store()->compareAndSwap(Key::named('job:state'), 'idle', 'running'
 Garantias por backend: `ArrayStore` é atômico dentro de um processo; `FileStore`
 serializa com um lock de arquivo por chave; `DatabaseStore` usa read-modify-write com
 lock de linha; `RedisStore` usa atômicos do servidor. Veja
-[Remember e locks](../guias/remember-e-locks.md#contadores-atomicos).
+[Remember e locks](../guias/remember-e-locks.md#contadores-atômicos).

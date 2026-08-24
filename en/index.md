@@ -5,8 +5,10 @@
 CacheerPHP 6 is an **instance-first** cache: a small `Cacheer` kernel over a minimal
 four-method `Store` contract, with everything else — batching, tags, locks, atomic
 counters, tiering, resilience, encryption — an **optional capability** you opt
-into. There is no global state and no autoload-time side effect. v5 stays on its
-own `5.x` line during migration.
+into. Caches are never global — you construct one and inject it — and the package
+itself runs nothing at autoload time; the one process-global is the opt-in
+[`Telemetry`](./guides/observability.md#the-global-telemetry-tap) tap, dormant
+until a listener is registered. v5 stays on its own `5.x` line during migration.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;

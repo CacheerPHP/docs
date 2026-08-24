@@ -84,6 +84,6 @@ $pipeline = PipelineConfig::default()->withV5Reader(new V5PayloadReader(compress
 
 `FileStore` and `DatabaseStore` can additionally **rewrite** legacy values in the
 v6 envelope on read (`migrateLegacyOnRead: true`). See the
-[migration guide](../updating/index.md#data-compatibility-and-rewrite-on-read).
+[migration guide](../updating/index.md#5-data-compatibility-and-rewrite-on-read).
 Note that v5 used unauthenticated AES-256-CBC — a wrong key surfaces only as a
 failed `unserialize`, never cryptographically.

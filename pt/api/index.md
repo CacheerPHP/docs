@@ -30,9 +30,11 @@ capacidades opcionais e decorators componíveis.
 
 ## Convenções
 
-- **Baseado em instâncias.** Não há estado global. Construa um `Cacheer` e passe-o
-  onde precisar. Use a interface `Contracts\Cache` em type hints para que um cache
-  com escopo ou com policy seja substituível.
+- **Baseado em instâncias.** Construa um `Cacheer` e passe-o onde precisar — não há
+  fachada estática nem singleton ambiente. Use a interface `Contracts\Cache` em type
+  hints para que um cache com escopo ou com policy seja substituível. O único estado
+  global do processo é o tap opcional
+  [`Telemetry`](../guias/observabilidade.md#o-tap-global-de-telemetria).
 - **Um único tipo de cache.** `scope()`, `in()` e `withPolicy()` retornam outro
   `Cacheer`, então toda combinação compõe e nada se perde pelo caminho.
 - **Chaves são strings ou objetos `Key`.** Todo método que recebe uma chave aceita

@@ -99,7 +99,7 @@ public function many(iterable $keys, mixed $default = null): array
 ```
 
 Returns `[key => value]`, using `$default` for misses. Uses the store's native
-batch read when it implements [`BatchStore`](./drivers.md#batchstore).
+batch read when it implements [`BatchStore`](./drivers.md#capability-interfaces).
 
 ```php
 $values = $cache->many(['user:1', 'user:2', 'user:3'], default: null);
@@ -195,7 +195,7 @@ public function clear(): void
 ```
 
 Removes everything in this cache's keyspace. On a **scoped** cache it removes only
-that scope (requires [`FlushableScopeStore`](./drivers.md#flushablescopestore)).
+that scope (requires [`FlushableScopeStore`](./drivers.md#capability-interfaces)).
 
 ## Compute-and-store
 

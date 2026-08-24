@@ -5,8 +5,12 @@
 O CacheerPHP 6 é um cache **baseado em instâncias**: um núcleo `Cacheer` enxuto
 sobre um contrato `Store` mínimo de quatro métodos, com tudo o mais — lotes, tags,
 locks, contadores atômicos, camadas, resiliência, criptografia — como uma
-**capacidade opcional** que você habilita. Não há estado global nem efeito
-colateral no autoload. A v5 segue na própria linha `5.x` durante a migração.
+**capacidade opcional** que você habilita. Caches nunca são globais — você
+constrói um e o injeta — e o pacote em si não executa nada no autoload; o único
+estado global do processo é o tap opcional
+[`Telemetry`](./guias/observabilidade.md#o-tap-global-de-telemetria), dormente até
+que um listener seja registrado. A v5 segue na própria linha `5.x` durante a
+migração.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;

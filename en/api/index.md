@@ -30,9 +30,11 @@ and composable decorators.
 
 ## Conventions
 
-- **Instance-first.** There is no global state. Construct a `Cacheer` and pass it
-  where you need it. Type-hint the `Contracts\Cache` interface so a scoped or
-  policy-bound cache is substitutable.
+- **Instance-first.** Construct a `Cacheer` and pass it where you need it — there
+  is no static facade and no ambient singleton. Type-hint the `Contracts\Cache`
+  interface so a scoped or policy-bound cache is substitutable. The one
+  process-global is the opt-in
+  [`Telemetry`](../guides/observability.md#the-global-telemetry-tap) tap.
 - **One cache type.** `scope()`, `in()`, and `withPolicy()` return another
   `Cacheer`, so every combination composes and nothing is lost along the way.
 - **Keys are strings or `Key` objects.** Every method that takes a key accepts

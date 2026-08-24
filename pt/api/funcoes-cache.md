@@ -98,7 +98,7 @@ public function many(iterable $keys, mixed $default = null): array
 ```
 
 Retorna `[chave => valor]`, usando `$default` para os misses. Usa a leitura em lote
-nativa da store quando ela implementa [`BatchStore`](./drivers.md#batchstore).
+nativa da store quando ela implementa [`BatchStore`](./drivers.md#interfaces-de-capacidade).
 
 ## Escrita
 
@@ -190,7 +190,7 @@ public function clear(): void
 ```
 
 Remove tudo no keyspace deste cache. Em um cache **com escopo**, remove apenas
-aquele escopo (requer [`FlushableScopeStore`](./drivers.md#flushablescopestore)).
+aquele escopo (requer [`FlushableScopeStore`](./drivers.md#interfaces-de-capacidade)).
 
 ## Computar e armazenar
 

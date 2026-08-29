@@ -29,7 +29,7 @@ and called on the cache so the scope applies.
 
 ```php
 // increment(string|Key $key, int $amount = 1, ?int $initial = null, $ttl = null): int
-$cache->increment('page:views');                      // 1 (key must exist without $initial)
+$cache->increment('page:views');                      // 1 (a missing key starts at zero)
 $cache->increment('page:views', 5);                   // 6
 $cache->increment('score', 1, initial: 100);          // starts at 100 + 1 = 101
 $cache->decrement('stock', 1);                        // reads better than a negative amount

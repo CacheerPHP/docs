@@ -273,9 +273,9 @@ public function increment(string|Key $key, int $amount = 1, ?int $initial = null
 public function decrement(string|Key $key, int $amount = 1, ?int $initial = null, Ttl|DateInterval|int|string|null $ttl = null): int
 ```
 
-Atomically adjust a counter and return its new value. With `$initial` set, a
-missing key is created as `($initial ± $amount)` and the optional `$ttl` applied;
-without it, a missing key is left alone. Requires `AtomicStore`.
+Atomically adjust a counter and return its new value. A missing key starts at
+zero by default, or at `$initial` when provided, then `$amount` is applied. The
+optional `$ttl` is applied when the counter is created. Requires `AtomicStore`.
 
 ```php
 $cache->increment('page-views', 1, initial: 0);

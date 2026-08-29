@@ -29,7 +29,7 @@ chamados no cache para que o escopo seja aplicado.
 
 ```php
 // increment(string|Key $key, int $amount = 1, ?int $initial = null, $ttl = null): int
-$cache->increment('page:views');                      // 1 (sem $initial a chave precisa existir)
+$cache->increment('page:views');                      // 1 (uma chave ausente começa em zero)
 $cache->increment('page:views', 5);                   // 6
 $cache->increment('score', 1, initial: 100);          // começa em 100 + 1 = 101
 $cache->decrement('stock', 1);                        // lê melhor que um valor negativo

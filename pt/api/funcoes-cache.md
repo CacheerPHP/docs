@@ -268,9 +268,10 @@ public function increment(string|Key $key, int $amount = 1, ?int $initial = null
 public function decrement(string|Key $key, int $amount = 1, ?int $initial = null, Ttl|DateInterval|int|string|null $ttl = null): int
 ```
 
-Ajustam um contador atomicamente e retornam o novo valor. Com `$initial`, uma chave
-ausente é criada como `($initial ± $amount)` e o `$ttl` opcional é aplicado; sem
-ele, uma chave ausente é deixada intacta. Requer `AtomicStore`.
+Ajustam um contador atomicamente e retornam o novo valor. Por padrão, uma chave
+ausente começa em zero; quando fornecido, `$initial` substitui esse valor inicial.
+Depois, `$amount` é aplicado. O `$ttl` opcional é usado quando o contador é criado.
+Requer `AtomicStore`.
 
 ```php
 $cache->increment('page-views', 1, initial: 0);

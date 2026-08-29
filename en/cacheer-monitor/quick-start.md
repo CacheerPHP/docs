@@ -12,7 +12,7 @@ composer require cacheerphp/monitor
 
 That covers every way a cache can be built: the named constructors, `Cacheer::build()`, a plain `new Cacheer($store)`, and the `tiered()` / `resilient()` decorators. Scoped and policy-bound views inherit it, and capability operations (`increment`, `decrement`, `touch`, `tag`, `flushTag`) report too.
 
-> Requires **CacheerPHP 6**. Until 6.0 is tagged, the dependency must allow the dev branch (`^6.0@dev`); see [when nothing shows up](#when-nothing-shows-up).
+> Requires **CacheerPHP 6**. While 6.0 is a pre-release the dependency uses `^6.0@RC`, which pins to the tagged `6.0.0-RC1`; see [when nothing shows up](#when-nothing-shows-up).
 
 ## Start the Dashboard
 
@@ -136,7 +136,6 @@ It exits non-zero when a check fails, so it works in CI. The two usual causes:
   system temp directory, so "nothing is reported" is often "the dashboard is
   reading a different file".
 - **The CacheerPHP version.** The monitor hooks CacheerPHP 6's telemetry tap,
-  which does not exist in v4/v5. Until 6.0 is tagged the constraint must allow
-  the dev branch (`^6.0@dev`) — a plain `^6.0` silently fails
-  `minimum-stability: stable` and leaves an old release installed with no tap to
-  hook.
+  which does not exist in v4/v5. While 6.0 is a pre-release the constraint is
+  `^6.0@RC` — a plain `^6.0` silently fails `minimum-stability: stable` and
+  leaves an old release installed with no tap to hook.

@@ -50,6 +50,31 @@ Implemente as [interfaces de capacidade](../api/drivers.md#interfaces-de-capacid
 que você realmente garante. O núcleo lança `UnsupportedCapabilityException` para as
 demais em vez de fingir.
 
+### Nunca responda perguntas de capacidade com `instanceof`
+
+Um decorator precisa declarar toda capacidade que possa repassar, então `instanceof`
+é `true` para wrappers em volta de stores que não a honram. Pergunte com
+`Capabilities::supports($store, X::class)` (ou `$cache->supports(X::class)`).
+
+Se a **sua** store for ela mesma um decorator, implemente `CapabilityAware` e delegue
+para a store que vai executar a operação:
+
+```php
+use Silviooosilva\CacheerPhp\Contracts\CapabilityAware;
+use Silviooosilva\CacheerPhp\Kernel\Capabilities;
+
+final class MeuDecorator implements Store, AtomicStore, LockingStore, CapabilityAware
+{
+    public function supports(string $capability): bool
+    {
+        return Capabilities::supports($this->inner, $capability);
+    }
+}
+```
+
+O kernel depende disso para degradar otimizações opcionais em vez de falhar — sem
+isso, embrulhar uma store pode transformar um `remember()` funcional em exceção.
+
 ## 3. Reutilize o pipeline de armazenamento
 
 Codifique valores por um `EnvelopeCodec` de um

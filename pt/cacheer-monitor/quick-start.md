@@ -8,7 +8,11 @@ Ponha a telemetria a chegar ao dashboard em menos de um minuto.
 composer require cacheerphp/monitor
 ```
 
-**A integração é só isto.** O pacote regista-se automaticamente através do `autoload.files` do Composer — assim que o `vendor/autoload.php` é carregado, todas as operações de cache de todas as instâncias `Cacheer` passam a ser instrumentadas automaticamente. Não é preciso alterar código.
+**A integração é só isto.** O pacote regista-se automaticamente através do `autoload.files` do Composer — assim que o `vendor/autoload.php` é carregado, regista um listener no tap global de telemetria do CacheerPHP 6 e todos os caches passam a reportar automaticamente. Não é preciso alterar código.
+
+Isto cobre todas as formas de construir um cache: os construtores nomeados, o `Cacheer::build()`, um simples `new Cacheer($store)` e os decorators `tiered()` / `resilient()`. Vistas com escopo ou com policy herdam-no, e as operações de capacidade (`increment`, `decrement`, `touch`, `tag`, `flushTag`) também reportam.
+
+> Requer **CacheerPHP 6**. Enquanto a 6.0 for uma pré-lançamento, a dependência usa `^6.0@RC`, que fixa na etiqueta `6.0.0-RC1`; veja [quando não aparece nada](#quando-não-aparece-nada).
 
 ## Iniciar o Dashboard
 
@@ -42,20 +46,13 @@ Os eventos são escritos no caminho resolvido por esta ordem:
 2. Ficheiro `.env` na raiz do projeto
 3. Diretório temporário do sistema (`sys_get_temp_dir() . '/cacheer-monitor.jsonl'`)
 
-Para substituir, remova o listener registado automaticamente e adicione o seu depois do `vendor/autoload.php`:
+A substituição mais simples não precisa de código:
 
-```php
-use Silviooosilva\CacheerPhp\Cacheer;
-use Cacheer\Monitor\CacheerMonitorListener;
-use Cacheer\Monitor\Reporter\JsonlReporter;
-
-Cacheer::removeListeners();
-Cacheer::addListener(new CacheerMonitorListener(
-    new JsonlReporter('/var/log/myapp/cacheer-events.jsonl')
-));
+```bash
+CACHEER_MONITOR_EVENTS=/var/log/myapp/cacheer-events.jsonl
 ```
 
-Inicie o servidor a apontar para o mesmo caminho:
+Inicie o servidor apontando para o mesmo caminho:
 
 ```bash
 CACHEER_MONITOR_EVENTS=/var/log/myapp/cacheer-events.jsonl \
@@ -64,31 +61,83 @@ CACHEER_MONITOR_EVENTS=/var/log/myapp/cacheer-events.jsonl \
 
 ---
 
-## Múltiplos Listeners
+## Registar um listener manualmente
 
-Pode registar mais do que um listener — útil para enviar eventos para backends diferentes em simultâneo:
+Desligue primeiro a ponte, ou ficará com dois listeners a escrever:
 
-```php
-Cacheer::addListener(new CacheerMonitorListener(new JsonlReporter()));
-Cacheer::addListener(new MyCustomAlerter());
+```env
+CACHEER_MONITOR_AUTO_REGISTER=false
 ```
 
-Para remover todos os listeners:
+```php
+use Cacheer\Monitor\CacheerMonitorListener;
+use Cacheer\Monitor\Reporter\JsonlReporter;
+use Silviooosilva\CacheerPhp\Observability\Telemetry;
+
+Telemetry::listen(
+    (new CacheerMonitorListener(new JsonlReporter('/var/log/myapp/cacheer-events.jsonl')))->dispatch(...)
+);
+```
+
+## Vários listeners
+
+O tap distribui os eventos, por isso registe quantos quiser — útil para enviar
+eventos para vários backends ao mesmo tempo:
 
 ```php
-Cacheer::removeListeners();
+Telemetry::listen((new CacheerMonitorListener(new JsonlReporter()))->dispatch(...));
+Telemetry::listen($meuAlerta->handle(...));
+```
+
+Um listener que lance uma exceção nunca quebra uma operação de cache; o tap
+absorve a falha. Para remover todos os listeners (incluindo o automático):
+
+```php
+Telemetry::reset();
+```
+
+## Instrumentar apenas um cache
+
+A ponte é deliberadamente tudo-ou-nada. Para instrumentar um único cache,
+desligue-a e use o construtor `instrumented()` do próprio CacheerPHP:
+
+```php
+use Silviooosilva\CacheerPhp\Cacheer;
+use Silviooosilva\CacheerPhp\Observability\EventBus;
+
+$events = new EventBus();
+$events->listen((new CacheerMonitorListener(new JsonlReporter()))->dispatch(...));
+
+$cache = Cacheer::instrumented($store, $events);   // só este reporta
 ```
 
 ---
 
-## Legado: Registo Manual
+## Quando não aparece nada
 
-Antes da v1.0.0, a abordagem recomendada era envolver a instância `Cacheer` manualmente ou chamar `addListener` à mão. Ambas continuam a funcionar, mas já não são necessárias na maioria dos projetos:
+A ponte corre no autoload em cada pedido, por isso nunca pode avisar nem lançar
+exceções — o silêncio é o seu único modo de falha seguro. O `doctor` é onde esse
+silêncio é explicado:
 
-```php
-// Listener manual (continua válido para configuração personalizada):
-Cacheer::addListener(new CacheerMonitorListener(new JsonlReporter()));
-
-// Abordagem antiga com wrapper (funciona, mas exige alterações de código):
-$instrumented = InstrumentedCacheer::wrap($cacheer, new JsonlReporter());
+```bash
+vendor/bin/cacheer-monitor doctor
 ```
+
+```
+  [ok]  CacheerPHP telemetry tap Observability\Telemetry found
+  [ok]  Autoload bridge       active
+  [ok]  Listener registered   caches will report
+  [ok]  Events file           /tmp/cacheer-monitor.jsonl
+```
+
+Sai com código diferente de zero quando uma verificação falha, por isso funciona
+em CI. As duas causas habituais:
+
+- **O ficheiro de eventos.** Sem `CACHEER_MONITOR_EVENTS` definido, o caminho por
+  omissão fica no diretório temporário do sistema — logo "não reporta nada" é
+  muitas vezes "o dashboard está a ler outro ficheiro".
+- **A versão do CacheerPHP.** O monitor liga-se ao tap de telemetria do
+  CacheerPHP 6, que não existe na v4/v5. Enquanto a 6.0 for uma pré-lançamento, a
+  restrição é `^6.0@RC` — um `^6.0` simples falha silenciosamente o
+  `minimum-stability: stable` e deixa instalada uma versão antiga sem tap onde
+  ligar.

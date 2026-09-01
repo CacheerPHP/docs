@@ -27,5 +27,15 @@ $tenant->scope('reports')->set('daily', $rows);
 $tenant->clear(); // clears the tenant and everything under it
 ```
 
-A `ScopedCacheer` has the same API as `Cacheer` — `set`, `get`, `remember`,
-`flexible`, batch, and `scope()` again. See the [Scopes guide](../guides/scopes.md).
+`scope()` returns another `Cacheer` — same type, same whole API — so a scoped
+cache can never silently lack `remember()`, `flexible()`, batch reads,
+capabilities, `withPolicy()`, or `formatted()`. `in()` is an alias if it reads
+better:
+
+```php
+$cache->in('reports')->remember('daily', '10 minutes', fn () => build());
+$cache->in('reports')->increment('runs');       // scoped counter
+$cache->in('reports')->boundScope();            // "reports"
+```
+
+See the [Scopes guide](../guides/scopes.md).

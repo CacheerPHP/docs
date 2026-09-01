@@ -16,8 +16,18 @@ $cache = $cache->withPolicy(
 );
 ```
 
-`withPolicy()` returns a `PolicyCacheer` wrapping the original — the policy is
+`withPolicy()` returns another `Cacheer` with the policy bound — the policy is
 immutable, and each `with*()` returns a new instance.
+
+Because it is the same type, a policy composes with scoping in either order, and
+the resulting cache keeps the whole surface (capabilities included):
+
+```php
+$cache->in('billing')->withPolicy($policy);   // identical to…
+$cache->withPolicy($policy)->in('billing');
+
+$cache->stats()['policy'];                    // true when one is bound
+```
 
 ## Default TTL — `withTtl()`
 
@@ -62,6 +72,12 @@ latency.
 ```php
 $policy = CachePolicy::defaults()->withTtl('5 minutes')->withServeStaleOnError('2 minutes');
 ```
+
+## What a policy does not touch
+
+`flexible()`'s `$stale` window is an explicit argument, not a default, so jitter
+and negative caching never reshape it — a `flexible($k, 30, 300, ...)` window is
+300 seconds whatever the policy says.
 
 ## Determinism
 

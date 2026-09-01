@@ -30,14 +30,19 @@ não puder ser adquirido na janela interna, um worker cai para calcular em vez d
 bloquear indefinidamente — correção acima de coordenação.
 
 Em uma store que não pode travar, `remember()` degrada para um compute-and-store
-simples (sem coordenação), ainda correto, só não à prova de estampede.
+simples (sem coordenação), ainda correto, só não à prova de estampede. Isso também
+vale através de decorators: embrulhar uma store em `TieredStore`, `ResilientStore`
+ou `InstrumentedStore` nunca transforma um `remember()` funcional em falha, porque o
+kernel pergunta se o travamento está *de fato* disponível em vez de confiar em
+`instanceof`.
 
-## `rememberForever`
+## `rememberForever()`
 
-Passe `null` como TTL para uma entrada que nunca expira:
+Para uma entrada que nunca expira:
 
 ```php
-$config = $cache->remember('app:config', ttl: null, callback: fn () => load_config());
+$config = $cache->rememberForever('app:config', fn () => load_config());
+$config = $cache->remember('app:config', null, fn () => load_config()); // o mesmo
 ```
 
 ## Usando locks diretamente
@@ -45,9 +50,7 @@ $config = $cache->remember('app:config', ttl: null, callback: fn () => load_conf
 Para seções críticas que não são só cache, adquira um lock você mesmo:
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Ttl;
-
-$lock = $store->lock('nightly-report', Ttl::minutes(5));
+$lock = $cache->lock('nightly-report', '5 minutes');
 
 if (! $lock->block(10.0)) {
     return; // outro worker está executando
@@ -61,20 +64,29 @@ try {
 ```
 
 Locks carregam um TTL e autoexpiram (sem deadlock se um dono travar), e a liberação é
-do dono. Veja a [referência de Locks](../api/locks.md).
+do dono. Nomes de lock têm namespace por escopo, então
+`$cache->in('tenant-a')->lock('import')` e `$cache->in('tenant-b')->lock('import')`
+não disputam. Veja a [referência de Locks](../api/locks.md).
 
 ## Contadores atômicos
 
-Contadores são uma capacidade da store
-([`AtomicStore`](../api/drivers.md#interfaces-de-capacidade)), atômicos até a garantia
-do backend:
+Contadores são a capacidade
+[`AtomicStore`](../api/drivers.md#interfaces-de-capacidade) da store, chamados no
+cache para que o escopo seja aplicado, e atômicos até a garantia do backend:
+
+```php
+$next = $cache->increment('page:views');                   // 1, 2, 3, ...
+$cache->increment('page:views', 5);
+$cache->decrement('stock', 1);
+$cache->increment('rate:user:99', 1, initial: 0, ttl: '1 minute');
+```
+
+Para concorrência otimista, `compareAndSwap()` é uma primitiva do contrato da store:
 
 ```php
 use Silviooosilva\CacheerPhp\Kernel\Key;
 
-$next = $store->increment(Key::named('page:views'));           // 1, 2, 3, ...
-$store->increment(Key::named('page:views'), amount: 5);
-$ok = $store->compareAndSwap(Key::named('state'), 'idle', 'running');
+$ok = $cache->store()->compareAndSwap(Key::named('state'), 'idle', 'running');
 ```
 
-Veja [Contadores atômicos e CAS](../tutoriais/exemplo-14-armazenamento-condicional-add.md).
+Veja [Escritas condicionais e contadores atômicos](../tutoriais/exemplo-14-armazenamento-condicional-add.md).

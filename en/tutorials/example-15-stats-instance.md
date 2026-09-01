@@ -1,7 +1,26 @@
 # Observability: events & metrics
 
-> v5's `stats()` reported driver flags. v6 gives you typed events and an
-> in-process metrics collector — without ever recording your cache values.
+> v5's `stats()` reported driver flags. v6 keeps `stats()` — now describing the
+> cache itself — and adds typed events plus an in-process metrics collector,
+> without ever recording your cache values.
+
+## `stats()` — what this cache *is*
+
+```php
+$cache->in('reports')->withPolicy($policy)->stats();
+// [
+//     'store'        => 'FileStore',
+//     'scope'        => 'reports',
+//     'policy'       => true,
+//     'capabilities' => ['batch' => true, 'atomic' => true, 'locking' => true, ...],
+// ]
+```
+
+Capabilities are reported honestly, decorators included — this is the same answer
+`supports()` gives, so it is safe to branch on. Nothing here contains cached
+values, so it is fine to log or expose on a health endpoint.
+
+## Events & metrics — what it has been *doing*
 
 Wrap a store with `instrumented`, attach a `MetricsCollector`, and read a snapshot.
 

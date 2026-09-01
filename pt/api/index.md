@@ -9,7 +9,7 @@ capacidades opcionais e decorators componíveis.
 | Página | Descrição |
 |--------|-----------|
 | [Visão geral](./visao-geral.md) | Arquitetura, namespaces e como as peças se encaixam |
-| [Cache e ScopedCacheer](./funcoes-cache.md) | `get`, `set`, `remember`, `flexible`, `scope`, lotes e construtores nomeados |
+| [Cacheer](./funcoes-cache.md) | A superfície inteira: `get`/`set`, `remember`, `flexible`, capacidades, `scope`, `withPolicy` e construtores nomeados |
 | [Objetos de valor](./construtor-de-opcoes.md) | `Key`, `Scope`, `Ttl`, `CacheEntry` |
 | [TTL e Clock](./construtor-de-tempo.md) | Entradas de TTL, "para sempre" e o `Clock` injetado |
 
@@ -30,14 +30,21 @@ capacidades opcionais e decorators componíveis.
 
 ## Convenções
 
-- **Baseado em instâncias.** Não há estado global. Construa um `Cacheer` e passe-o
-  onde precisar.
+- **Baseado em instâncias.** Construa um `Cacheer` e passe-o onde precisar — não há
+  fachada estática nem singleton ambiente. Use a interface `Contracts\Cache` em type
+  hints para que um cache com escopo ou com policy seja substituível. O único estado
+  global do processo é o tap opcional
+  [`Telemetry`](../guias/observabilidade.md#o-tap-global-de-telemetria).
+- **Um único tipo de cache.** `scope()`, `in()` e `withPolicy()` retornam outro
+  `Cacheer`, então toda combinação compõe e nada se perde pelo caminho.
 - **Chaves são strings ou objetos `Key`.** Todo método que recebe uma chave aceita
   ambos; uma string simples é embrulhada como `Key::named($string)`.
 - **O tempo é injetado.** Todo construtor aceita um `Clock` opcional; o padrão é
   `SystemClock`. Testes usam `FakeClock`.
-- **Capacidades são verificadas, nunca fingidas.** Chamar uma capacidade que a
-  store não implementa lança `UnsupportedCapabilityException`.
+- **Capacidades vivem no cache.** `increment`, `decrement`, `touch`, `tag`,
+  `flushTag`, `lock`, `entries` e `prune` são métodos do `Cacheer`, com o escopo
+  deste cache aplicado. Pergunte com `$cache->supports(...)` — nunca `instanceof` —
+  e chamar uma que a store não honra lança `UnsupportedCapabilityException`.
 - **Valores fazem round-trip sem perdas**, incluindo `null`, `false`, `0`, `''` e
   `[]`. Um `null` cacheado é um hit, não um miss — use `Cacheer::entry()` para
   distingui-los.

@@ -31,14 +31,19 @@ lock can't be acquired within the internal window, a worker falls back to
 computing rather than blocking indefinitely — correctness over coordination.
 
 On a store that can't lock, `remember()` degrades to a plain compute-and-store
-(no coordination), which is still correct, just not stampede-proof.
+(no coordination), which is still correct, just not stampede-proof. That holds
+through decorators too: wrapping a store in `TieredStore`, `ResilientStore`, or
+`InstrumentedStore` never turns a working `remember()` into a failure, because the
+kernel asks whether locking is *really* available rather than trusting
+`instanceof`.
 
-## `rememberForever`
+## `rememberForever()`
 
-Pass `null` as the TTL for an entry that never expires:
+For an entry that never expires:
 
 ```php
-$config = $cache->remember('app:config', ttl: null, callback: fn () => load_config());
+$config = $cache->rememberForever('app:config', fn () => load_config());
+$config = $cache->remember('app:config', null, fn () => load_config()); // same thing
 ```
 
 ## Using locks directly
@@ -46,9 +51,7 @@ $config = $cache->remember('app:config', ttl: null, callback: fn () => load_conf
 For critical sections that aren't just caching, take a lock yourself:
 
 ```php
-use Silviooosilva\CacheerPhp\Kernel\Ttl;
-
-$lock = $store->lock('nightly-report', Ttl::minutes(5));
+$lock = $cache->lock('nightly-report', '5 minutes');
 
 if (! $lock->block(10.0)) {
     return; // someone else is running it
@@ -62,20 +65,30 @@ try {
 ```
 
 Locks carry a TTL and self-expire (no deadlock if a holder crashes), and release
-is owner-scoped (a lock only deletes its own token). See the
+is owner-scoped (a lock only deletes its own token). Lock names are namespaced by
+scope, so `$cache->in('tenant-a')->lock('import')` and
+`$cache->in('tenant-b')->lock('import')` do not contend. See the
 [Locks reference](../api/locks.md) for `acquire()`, `block()`, and `release()`.
 
 ## Atomic counters
 
-Counters are a capability of the store ([`AtomicStore`](../api/drivers.md#capability-interfaces)),
-atomic to the guarantee of the backend:
+Counters are the store's [`AtomicStore`](../api/drivers.md#capability-interfaces)
+capability, called on the cache so the scope applies, and atomic to the guarantee
+of the backend:
+
+```php
+$next = $cache->increment('page:views');                   // 1, 2, 3, ...
+$cache->increment('page:views', 5);
+$cache->decrement('stock', 1);
+$cache->increment('rate:user:99', 1, initial: 0, ttl: '1 minute');
+```
+
+For optimistic concurrency, `compareAndSwap()` is a store-contract primitive:
 
 ```php
 use Silviooosilva\CacheerPhp\Kernel\Key;
 
-$next = $store->increment(Key::named('page:views'));           // 1, 2, 3, ...
-$store->increment(Key::named('page:views'), amount: 5);
-$ok = $store->compareAndSwap(Key::named('state'), 'idle', 'running');
+$ok = $cache->store()->compareAndSwap(Key::named('state'), 'idle', 'running');
 ```
 
-See [Atomic counters & CAS](../tutorials/example-14-add-conditional.md).
+See [Conditional writes & atomic counters](../tutorials/example-14-add-conditional.md).

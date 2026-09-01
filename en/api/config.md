@@ -24,7 +24,7 @@ Each persistent constructor accepts an optional `PipelineConfig` and `Clock`:
 $cache = Cacheer::file('/var/cache/app', $pipeline, $clock);
 ```
 
-See [Cacheer & ScopedCacheer](./cache-functions.md#named-constructors) for the full
+See [Cacheer](./cache-functions.md#named-constructors) for the full
 signatures, including the `tiered`, `resilient`, and `instrumented` decorators.
 
 ## `Cacheer::build()` — the fluent builder
@@ -53,8 +53,8 @@ $cache = Cacheer::build()
 | Policy | `defaultTtl($ttl)`, `jitter($fraction)`, `negativeTtl($ttl)`, `serveStaleOnError($grace)` |
 | Other | `clock($clock)` |
 
-`create()` returns a plain `Cacheer`, or a `PolicyCacheer` when any policy method
-was used (both expose the same read/write surface).
+`create()` returns a `Cacheer` — with the policy already bound when any policy
+method was used.
 
 ## `PipelineConfig` — the storage pipeline
 

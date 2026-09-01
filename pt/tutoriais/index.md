@@ -25,7 +25,7 @@ assinaturas precisas, a [Referência da API](../api/index.md).
 
 ## Avançado
 
-14. [Contadores atômicos e compare-and-swap](./exemplo-14-armazenamento-condicional-add.md)
+14. [Escritas condicionais e contadores atômicos](./exemplo-14-armazenamento-condicional-add.md) — `add()`, contadores, locks
 15. [Observabilidade: eventos e métricas](./exemplo-15-estatisticas-instancia.md)
 16. [Cache em camadas (L1/L2)](./exemplo-16-integracao-monitor.md)
 17. [Locks e seções críticas](./exemplo-17-locks-contadores-atomicos.md)

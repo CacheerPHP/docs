@@ -81,10 +81,40 @@ DatabaseStoreSchema::drop($pdo, 'cacheer_store');     // rollback
 
 Ou veja o DDL com `cacheer migrate --dry-run` (veja [CLI](../guias/cli.md)).
 
+## Perguntando se uma capacidade é real
+
+**Nunca use `instanceof` em uma store para decidir o que ela sabe fazer.** O PHP não
+tem implementação condicional de interface, então um decorator precisa declarar toda
+capacidade que possa repassar — `$store instanceof AtomicStore` é `true` até para um
+wrapper em volta de uma store que não sabe incrementar. Pergunte assim:
+
+```php
+use Silviooosilva\CacheerPhp\Contracts\AtomicStore;
+use Silviooosilva\CacheerPhp\Kernel\Capabilities;
+
+$cache->supports(AtomicStore::class);                  // em um cache
+Capabilities::supports($store, AtomicStore::class);    // em uma store crua
+```
+
+Ambos respondem pela store que de fato vai executar a operação, e aninhamento
+funciona. `$cache->stats()['capabilities']` dá o quadro inteiro de uma vez.
+
 ## Decorators
 
 Decorators embrulham qualquer store e repassam todas as capacidades que a(s)
-store(s) embrulhada(s) oferecem, então a composição nunca perde uma funcionalidade.
+store(s) embrulhada(s) oferecem, então a composição nunca perde uma funcionalidade —
+e nunca *inventa* uma também. Cada um responde `supports()` pela store que realmente
+executa a operação:
+
+| Decorator | Delega as perguntas de capacidade para |
+|---|---|
+| `TieredStore` | **L2** (a camada compartilhada é a fonte da verdade); lotes sempre disponíveis |
+| `ResilientStore` | **ambas** as stores — escritas sempre chegam ao fallback, então a capacidade só é real se as duas a honram |
+| `InstrumentedStore` | a store **embrulhada**; lotes sempre disponíveis |
+
+Como o kernel usa isso, uma otimização opcional degrada em vez de falhar:
+`remember()` faz single-flight com um lock quando ele está genuinamente disponível e
+cai para um cálculo simples quando não está.
 
 - **[`TieredStore`](../guias/cache-em-camadas.md)** — um L1 local rápido na frente de
   um L2 compartilhado, com promoção e coerência por geração.

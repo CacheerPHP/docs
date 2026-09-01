@@ -7,10 +7,11 @@ transforma valores em um envelope seguro e versionado.
 
 ```text
 API pública
-  Cacheer / ScopedCacheer / PolicyCacheer
+  Cache (interface)  <-  Cacheer  (+ visão FormattedCacheer)
+    escopo e policy são estado do objeto, não tipos extras
           |
 Objetos de valor do núcleo
-  Key / Scope / Ttl / CacheEntry / Clock
+  Key / Scope / Ttl / CacheEntry / Clock / Capabilities
           |
 Decorators (opcionais, componíveis)
   TieredStore / ResilientStore / InstrumentedStore
@@ -29,12 +30,13 @@ Pipeline de armazenamento
 
 | Namespace | Conteúdo |
 |---|---|
-| `Kernel\` | `Cacheer`, `ScopedCacheer`, `PolicyCacheer` e os objetos de valor `Key`, `Scope`, `Ttl`, `CacheEntry` |
-| `Contracts\` | `Store` e as interfaces de capacidade (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`), além de `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
+| raiz | `Cacheer` — a única classe de cache |
+| `Kernel\` | Os objetos de valor `Key`, `Scope`, `Ttl`, `CacheEntry`, além de `Capabilities` (a verificação honesta de capacidade) |
+| `Contracts\` | `Cache` (usada em type hints pela aplicação), `Store` e as interfaces de capacidade (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`, `CapabilityAware`), além de `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
 | `Stores\` | `ArrayStore`, `FileStore`, `DatabaseStore`, `RedisStore` e os decorators `TieredStore`, `ResilientStore`, `InstrumentedStore` |
 | `Storage\` | `Envelope`, `EnvelopeCodec`, serializers, compressão, criptografia, codificação de chave e o leitor v5 |
 | `Config\` | `PipelineConfig`, `CachePolicy` |
-| `Support\` | `SystemClock`, `CircuitBreaker`, executores deferidos |
+| `Support\` | `SystemClock`, `CircuitBreaker`, executores deferidos, `CacheDataFormatter`, `FormattedCacheer` |
 | `Observability\` | `CacheEvent`, `CacheEventType`, `EventBus`, `MetricsCollector`, pontes PSR-3/PSR-14 |
 | `Psr\` | `Psr16Cache`, `Psr6Pool`, `Psr6Item` |
 | `Console\` | a CLI de operações `cacheer` |

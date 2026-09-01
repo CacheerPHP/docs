@@ -9,7 +9,7 @@ and composable decorators.
 | Page | Description |
 |------|-------------|
 | [Overview](./overview.md) | Architecture, namespaces, and how the pieces fit |
-| [Cacheer & ScopedCacheer](./cache-functions.md) | `get`, `set`, `remember`, `flexible`, `scope`, batch, and named constructors |
+| [Cacheer](./cache-functions.md) | The whole surface: `get`/`set`, `remember`, `flexible`, capabilities, `scope`, `withPolicy`, and named constructors |
 | [Value objects](./option-builder.md) | `Key`, `Scope`, `Ttl`, `CacheEntry` |
 | [TTL & Clock](./time-builder.md) | TTL inputs, forever, and the injected `Clock` |
 
@@ -30,14 +30,22 @@ and composable decorators.
 
 ## Conventions
 
-- **Instance-first.** There is no global state. Construct a `Cacheer` and pass it
-  where you need it.
+- **Instance-first.** Construct a `Cacheer` and pass it where you need it — there
+  is no static facade and no ambient singleton. Type-hint the `Contracts\Cache`
+  interface so a scoped or policy-bound cache is substitutable. The one
+  process-global is the opt-in
+  [`Telemetry`](../guides/observability.md#the-global-telemetry-tap) tap.
+- **One cache type.** `scope()`, `in()`, and `withPolicy()` return another
+  `Cacheer`, so every combination composes and nothing is lost along the way.
 - **Keys are strings or `Key` objects.** Every method that takes a key accepts
   both; a bare string is wrapped as `Key::named($string)`.
 - **Time is injected.** Every constructor accepts an optional `Clock`; the
   default is `SystemClock`. Tests use `FakeClock`.
-- **Capabilities are checked, never faked.** Calling a capability a store does not
-  implement throws `UnsupportedCapabilityException` instead of degrading silently.
+- **Capabilities live on the cache.** `increment`, `decrement`, `touch`, `tag`,
+  `flushTag`, `lock`, `entries`, and `prune` are methods on `Cacheer`, with this
+  cache's scope applied. Ask `$cache->supports(...)` — never `instanceof` — and
+  calling one the store cannot honor throws `UnsupportedCapabilityException`
+  instead of degrading silently.
 - **Values round-trip losslessly**, including `null`, `false`, `0`, `''`, and
   `[]`. A cached `null` is a hit, not a miss — use `Cacheer::entry()` to tell them
   apart.

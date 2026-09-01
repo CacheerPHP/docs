@@ -63,6 +63,46 @@ use Silviooosilva\CacheerPhp\Observability\Psr14EventDispatcher;
 $cache = Cacheer::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher));
 ```
 
+## O tap global de telemetria
+
+Tudo acima tem escopo de instância: um cache emite eventos apenas porque *você* o
+embrulhou. `Observability\Telemetry` é a única exceção deliberada na v6, e vale ser
+preciso sobre o que ela é.
+
+- Guarda **estado global do processo** — uma lista estática de listeners.
+- É **dormente**. Sem nenhum listener registrado, os construtores nomeados do
+  `Cacheer` seguem o caminho simples, sem instrumentação: sem custo, sem mudança de
+  comportamento, nada observável.
+- **A biblioteca não registra nada.** O `silviooosilva/cacheer-php` declara apenas
+  autoload PSR-4, então instalá-lo não executa código algum.
+
+Ela existe para que um pacote de telemetria possa observar caches que não construiu:
+
+```php
+use Silviooosilva\CacheerPhp\Observability\Telemetry;
+
+Telemetry::listen(fn ($event) => $collector->record($event));  // habilita
+Telemetry::captureValues(true);                                 // desligado por padrão
+Telemetry::reset();                                             // desabilita
+```
+
+Uma vez que haja um listener registrado, todo cache construído por um construtor
+nomeado (`Cacheer::file()`, `::redis()`, …) é instrumentado de forma transparente.
+Caches que você constrói diretamente com `new Cacheer($store)` nunca são tocados
+por ela.
+
+### O efeito colateral no autoload
+
+Instalar o [`cacheerphp/monitor`](../cacheer-monitor/index.md) **adiciona** um: esse
+pacote declara `autoload.files`, e o bootstrap dele registra um listener assim que o
+`vendor/autoload.php` é carregado. Esse é justamente o objetivo — monitoramento sem
+fiação, veja o [guia rápido](../cacheer-monitor/quick-start.md) — mas é um efeito
+colateral real, vem daquele pacote e não deste, e você o habilita ao instalá-lo.
+
+Se você não quer estado global de processo algum: nunca chame `Telemetry::listen()`,
+não instale o monitor, e conecte a observabilidade explicitamente com
+`Cacheer::instrumented($store, $events)`, como mostrado no topo desta página.
+
 ## Valores nunca vazam
 
 - A captura de valores está **desligada por padrão**. Eventos carregam a chave, o

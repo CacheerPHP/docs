@@ -64,6 +64,46 @@ use Silviooosilva\CacheerPhp\Observability\Psr14EventDispatcher;
 $cache = Cacheer::instrumented($store, new Psr14EventDispatcher($psr14Dispatcher));
 ```
 
+## The global telemetry tap
+
+Everything above is instance-scoped: a cache emits events only because *you* wrapped
+it. `Observability\Telemetry` is the one deliberate exception in v6, and it is worth
+being precise about what it is.
+
+- It holds **process-global state** — a static listener list.
+- It is **dormant**. With no listeners registered, `Cacheer`'s named constructors
+  take the plain, uninstrumented path: no overhead, no behavior change, nothing
+  observable.
+- **The library registers nothing.** `silviooosilva/cacheer-php` declares only PSR-4
+  autoloading, so installing it executes no code.
+
+It exists so a telemetry package can observe caches it did not construct:
+
+```php
+use Silviooosilva\CacheerPhp\Observability\Telemetry;
+
+Telemetry::listen(fn ($event) => $collector->record($event));  // opt in
+Telemetry::captureValues(true);                                 // off by default
+Telemetry::reset();                                             // opt back out
+```
+
+Once a listener is registered, every cache built through a named constructor
+(`Cacheer::file()`, `::redis()`, …) is transparently instrumented. Caches you
+construct directly with `new Cacheer($store)` are never touched by it.
+
+### The autoload-time side effect
+
+Installing [`cacheerphp/monitor`](../cacheer-monitor/index.md) **does** add one:
+that package declares `autoload.files`, and its bootstrap registers a listener as
+soon as `vendor/autoload.php` is loaded. That is the whole point — zero-wiring
+monitoring, see its [quick start](../cacheer-monitor/quick-start.md) — but it is a
+real side effect, it comes from that package rather than this one, and you opt into
+it by installing it.
+
+If you want no process-global state at all: never call `Telemetry::listen()`, don't
+install the monitor, and wire observability explicitly with
+`Cacheer::instrumented($store, $events)` as shown at the top of this page.
+
 ## Values are never leaked
 
 - Value capture is **off by default**. Events carry the key, timing, byte size,

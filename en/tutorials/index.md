@@ -25,7 +25,7 @@ for precise signatures, the [API Reference](../api/index.md).
 
 ## Advanced
 
-14. [Atomic counters & compare-and-swap](./example-14-add-conditional.md)
+14. [Conditional writes & atomic counters](./example-14-add-conditional.md) — `add()`, counters, locks
 15. [Observability: events & metrics](./example-15-stats-instance.md)
 16. [Tiered caching (L1/L2)](./example-16-monitor-integration.md)
 17. [Locks & critical sections](./example-17-locks-atomic-counters.md)

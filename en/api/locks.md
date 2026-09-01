@@ -37,13 +37,20 @@ interface Lock
   the keyspace.
 - Release is **owner-scoped** (compare-and-delete): a lock only deletes its own
   token, so a slow holder cannot release a lock another worker has since acquired.
+- Lock names are **namespaced by scope**, so two scopes asking for the same name
+  get independent mutexes.
 
 ## Using a lock
 
-```php
-use Silviooosilva\CacheerPhp\Kernel\Ttl;
+Take locks on the **cache** — the name is namespaced by scope and the capability
+is checked for you:
 
-$lock = $store->lock('import:catalog', Ttl::seconds(30));
+```php
+public function lock(string $name, Ttl|DateInterval|int|string $ttl = 60): Lock
+```
+
+```php
+$lock = $cache->lock('import:catalog', 30);
 
 if ($lock->acquire()) {
     try {
@@ -57,7 +64,7 @@ if ($lock->acquire()) {
 Blocking with a timeout:
 
 ```php
-$lock = $store->lock('nightly-job', Ttl::minutes(5));
+$lock = $cache->lock('nightly-job', '5 minutes');
 
 if (! $lock->block(10.0)) {
     return; // another worker holds it; skip this run
@@ -76,5 +83,10 @@ When the store implements `LockingStore`, `remember()` is stampede-safe
 automatically: on a concurrent miss, one caller acquires the lock and computes
 while the others block briefly and then read the freshly-stored value. If the lock
 cannot be acquired within the internal window, callers fall back to computing
-rather than blocking forever. See the
+rather than blocking forever.
+
+When the store *cannot* lock — including a decorator around a store that cannot —
+`remember()` degrades to a plain compute rather than failing. The kernel decides
+this with `Capabilities::supports()`, never `instanceof`; see
+[Stores & capabilities](./drivers.md). See also the
 [Remember & locks guide](../guides/remember-and-locks.md).

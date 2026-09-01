@@ -9,17 +9,24 @@ reportam quantas foram removidas.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;
-use Silviooosilva\CacheerPhp\Stores\FileStore;
 
-$store = new FileStore(__DIR__ . '/cache');
-$cache = new Cacheer($store);
+$cache = Cacheer::file(__DIR__ . '/cache');
 
 // ... o tempo passa, entradas expiram ...
 
-$removed = $store->prune();  // número de entradas expiradas apagadas
+$removed = $cache->prune();  // número de entradas expiradas apagadas
 ```
 
-Rode pela CLU num cron em vez de no caminho da requisição:
+Para ver antes o que ainda está vivo, percorra o keyspace — `entries()` tem o escopo
+do cache em que você o chama:
+
+```php
+foreach ($cache->in('reports')->entries() as $entry) {
+    echo $entry->key()->value(), ' → ', $entry->remainingTtl($clock), "\n";
+}
+```
+
+Rode pela CLI num cron em vez de no caminho da requisição:
 
 ```sh
 vendor/bin/cacheer prune --dry-run   # reporta o que seria removido

@@ -16,8 +16,18 @@ $cache = $cache->withPolicy(
 );
 ```
 
-`withPolicy()` retorna um `PolicyCacheer` que embrulha o original — a política é
+`withPolicy()` retorna outro `Cacheer` com a política vinculada — a política é
 imutável, e cada `with*()` retorna uma nova instância.
+
+Por ser o mesmo tipo, uma política compõe com escopo em qualquer ordem, e o cache
+resultante mantém a superfície inteira (capacidades inclusive):
+
+```php
+$cache->in('billing')->withPolicy($policy);   // idêntico a…
+$cache->withPolicy($policy)->in('billing');
+
+$cache->stats()['policy'];                    // true quando há uma vinculada
+```
 
 ## TTL padrão — `withTtl()`
 
@@ -62,6 +72,12 @@ complementando o [`flexible()`](./stale-while-revalidate.md), que é sobre latê
 ```php
 $policy = CachePolicy::defaults()->withTtl('5 minutes')->withServeStaleOnError('2 minutes');
 ```
+
+## O que uma política não toca
+
+A janela `$stale` do `flexible()` é um argumento explícito, não um padrão, então
+jitter e cache negativo nunca a reformatam — uma janela `flexible($k, 30, 300, ...)`
+tem 300 segundos independentemente da política.
 
 ## Determinismo
 

@@ -5,8 +5,10 @@
 CacheerPHP 6 is an **instance-first** cache: a small `Cacheer` kernel over a minimal
 four-method `Store` contract, with everything else — batching, tags, locks, atomic
 counters, tiering, resilience, encryption — an **optional capability** you opt
-into. There is no global state and no autoload-time side effect. v5 stays on its
-own `5.x` line during migration.
+into. Caches are never global — you construct one and inject it — and the package
+itself runs nothing at autoload time; the one process-global is the opt-in
+[`Telemetry`](./guides/observability.md#the-global-telemetry-tap) tap, dormant
+until a listener is registered. v5 stays on its own `5.x` line during migration.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;
@@ -34,13 +36,20 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 
 ## What's New in v6.0
 
-- **Instance-first kernel.** Explicit `Cacheer` and immutable `ScopedCacheer` over
-  typed `Key`, `Scope`, `Ttl`, and `CacheEntry`; time is an injected `Clock`.
+- **Instance-first kernel.** One explicit, immutable `Cacheer` behind a `Cache`
+  interface, over typed `Key`, `Scope`, `Ttl`, and `CacheEntry`; time is an
+  injected `Clock`.
+- **One cache type.** Scope and policy are state on the object, so every
+  combination composes: `$cache->in('billing')->withPolicy($p)->increment('hits')`.
+  Type-hint `Cache` and any of them is substitutable.
 - **Tiny core, honest capabilities.** A store implements four methods; extra
-  behavior is declared by interface and checked at runtime, so a backend never
-  fakes a guarantee it can't make.
+  behavior is declared by interface and `$cache->supports(...)` answers truthfully
+  even through decorators, so a backend never fakes a guarantee it can't make.
+- **Capabilities on the cache.** `increment`, `decrement`, `touch`, `tag`,
+  `flushTag`, `lock`, `entries`, and `prune` are methods on the cache, with the
+  scope applied — no reaching past it to the store.
 - **Scopes** replace stringly namespaces with isolated keyspaces you can clear on
-  their own.
+  their own — and they apply to counters, tags, and locks too.
 - **Composable decorators.** [Tiered](./guides/tiered-caching.md) (L1/L2),
   [resilient](./guides/resilient-store.md) (circuit-breaker fallback), and
   [instrumented](./guides/observability.md) (typed events + metrics) wrap any store.
@@ -58,8 +67,12 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 
 - The static/global facade is gone — construct and inject a `Cacheer`. No drop-in
   v5 shim; migrate with the Rector set + mapping, or stay on `^5.2`.
-- `get()` no longer takes a read-time TTL; positional namespaces become `scope()`;
-  success is a return value or `entry()->isHit()`, not mutable state.
+- `get()` no longer takes a read-time TTL; positional namespaces become `scope()`
+  (or its alias `in()`); success is a return value or `entry()->isHit()`, not
+  mutable state.
+- Familiar v5 verbs are still here: `forever()`, `rememberForever()`, `missing()`,
+  `add()`, `pull()` (v5's `getAndForget`), `increment()`/`decrement()`, `touch()`
+  (v5's `renewCache`), `tag()`/`flushTag()`, `lock()`, and `stats()`.
 - Minimum PHP is **8.3**. Driver clients and extensions are optional.
 
 ---

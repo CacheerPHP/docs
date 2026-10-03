@@ -1,6 +1,6 @@
 # Documentação CacheerPHP (PT)
 
-**Versão atual: 6.0** | PHP 8.3+ | [Guia de atualização](./atualizacao/index.md)
+**Documentação: prévia 6.x** | PHP 8.3+ | [Guia de atualização](./atualizacao/index.md)
 
 O CacheerPHP 6 é um cache **baseado em instâncias**: um núcleo `Cacheer` enxuto
 sobre um contrato `Store` mínimo de quatro métodos, com tudo o mais — lotes, tags,
@@ -25,16 +25,18 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 
 ---
 
-## Seções
+## Escolha uma tarefa
 
-| Seção | Descrição |
-|-------|-----------|
-| [Primeiros Passos](./primeiros-passos/index.md) | Instalação, início rápido, stores, escopos, TTL, PSR |
-| [Guias](./guias/configuracao.md) | Aprofundamentos: escopos, remember/locks, SWR, camadas, resiliência, políticas, criptografia, observabilidade, CLI, stores |
-| [Referência da API](./api/index.md) | Referência precisa de cada classe e método público |
-| [Tutoriais](./tutoriais/index.md) | Exemplos curtos e objetivos da v6 |
-| [Guia de Atualização](./atualizacao/index.md) | Atualizando da v5 |
-| [Guia de Contribuição](./contribuicao/index.md) | Setup, testes, conformidade, RFCs |
+| Quero… | Começar aqui |
+|---|---|
+| Instalar o CacheerPHP | [Primeiros passos](./primeiros-passos/index.md) |
+| Escolher o armazenamento | [Stores e capacidades](./api/drivers.md) |
+| Guardar resultados dispendiosos | [Remember e locks](./guias/remember-e-locks.md) |
+| Gerir pedidos simultâneos | [Stale-while-revalidate](./guias/stale-while-revalidate.md) |
+| Monitorizar e depurar | [Início rápido do Cacheer Monitor](./cacheer-monitor/quick-start.md) |
+| Migrar uma aplicação v5 | [Guia de migração](./atualizacao/index.md) |
+
+Para assinaturas de métodos, consulte a [referência da API](./api/index.md). Para exemplos executáveis, consulte os [tutoriais](./tutoriais/index.md). Verifique as [versões e o suporte](./atualizacao/suporte-de-versoes.md) antes de escolher uma versão.
 
 ## Novidades da v6.0
 

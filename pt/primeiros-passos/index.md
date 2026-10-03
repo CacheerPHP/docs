@@ -20,8 +20,11 @@ opcionais.
 ## Instalação
 
 ```sh
-composer require silviooosilva/cacheer-php
+composer require silviooosilva/cacheer-php:"6.x-dev"
 ```
+
+A linha 6.x é atualmente uma prévia de desenvolvimento. Esta restrição instala a API documentada aqui; uma instalação sem versão seleciona a v5 estável. Consulte o [suporte de versões](../atualizacao/suporte-de-versoes.md) para verificar o estado.
+
 
 Isso já inclui os contratos PSR (`psr/simple-cache`, `psr/cache`, `psr/log`,
 `psr/event-dispatcher`).

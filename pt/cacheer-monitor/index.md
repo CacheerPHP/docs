@@ -29,3 +29,5 @@ O Cacheer Monitor é um dashboard local que observa um log de eventos JSONL emit
 - [Configuração](configuration.md)
 - [Fluxos Comuns](workflows.md)
 - [Resolução de Problemas](troubleshooting.md)
+
+O dashboard pode mostrar distribuições de TTL e namespaces quando os eventos incluem esses campos. A ponte atual da v6 não emite metadados de TTL nem de escopo; esses painéis não representam toda a expiração ou os espaços de chaves isolados da v6.

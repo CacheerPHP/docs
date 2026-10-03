@@ -1,6 +1,6 @@
 # CacheerPHP Documentation
 
-**Current version: 6.0** | PHP 8.3+ | [Migration guide](./updating/index.md)
+**Documentation: 6.x preview** | PHP 8.3+ | [Migration guide](./updating/index.md)
 
 CacheerPHP 6 is an **instance-first** cache: a small `Cacheer` kernel over a minimal
 four-method `Store` contract, with everything else — batching, tags, locks, atomic
@@ -23,16 +23,18 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 
 ---
 
-## Sections
+## Choose a task
 
-| Section | Description |
-|---------|-------------|
-| [Getting Started](./getting-started/index.md) | Install, quick start, stores, scopes, TTL, PSR |
-| [Guides](./guides/configuration.md) | Deep dives: scopes, remember/locks, SWR, tiering, resilience, policies, encryption, observability, CLI, custom stores |
-| [API Reference](./api/index.md) | Precise reference for every public class and method |
-| [Tutorials](./tutorials/index.md) | Short, task-focused v6 examples |
-| [Migration guide](./updating/index.md) | Upgrading from v5 |
-| [Contributing](./contributing/index.md) | Setup, tests, conformance, RFCs |
+| I want to… | Start here |
+|---|---|
+| Install CacheerPHP | [Getting started](./getting-started/index.md) |
+| Choose storage | [Stores and capabilities](./api/drivers.md) |
+| Cache expensive results | [Remember and locks](./guides/remember-and-locks.md) |
+| Handle concurrent requests | [Stale-while-revalidate](./guides/stale-while-revalidate.md) |
+| Monitor and debug | [Cacheer Monitor quick start](./cacheer-monitor/quick-start.md) |
+| Migrate a v5 application | [Migration guide](./updating/index.md) |
+
+For method signatures, use the [API reference](./api/index.md). For runnable examples, browse the [tutorials](./tutorials/index.md). Check [releases and version support](./updating/version-support.md) before selecting a version.
 
 ## What's New in v6.0
 

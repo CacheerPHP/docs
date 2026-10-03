@@ -20,8 +20,11 @@ optional pieces.
 ## Installation
 
 ```sh
-composer require silviooosilva/cacheer-php
+composer require silviooosilva/cacheer-php:"6.x-dev"
 ```
+
+The 6.x line is currently a development preview. This explicit constraint installs the API documented here; an unversioned install selects stable v5. See [version support](../updating/version-support.md) for the release status.
+
 
 This pulls in the PSR contracts automatically (`psr/simple-cache`, `psr/cache`,
 `psr/log`, `psr/event-dispatcher`).

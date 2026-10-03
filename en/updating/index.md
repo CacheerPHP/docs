@@ -9,8 +9,11 @@ rename. If a service can't move yet, keep it on `^5.2`.
 ## 1. Install
 
 ```sh
-composer require silviooosilva/cacheer-php:^6.0
+composer require silviooosilva/cacheer-php:"6.x-dev"
 ```
+
+The 6.x line is currently a development preview. This explicit constraint installs the API documented here; an unversioned install selects stable v5. See [version support](./version-support.md) for the release status.
+
 
 v6 requires PHP 8.3+. The core installs with no backend clients; `ArrayStore` and
 `FileStore` work out of the box. Redis and PDO drivers stay optional (Composer

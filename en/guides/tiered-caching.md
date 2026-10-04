@@ -33,10 +33,14 @@ Writes and deletes go to **both** layers so they can't drift:
 - `delete()` removes from both.
 - `clear()` clears both.
 
+L2 is written first, so if it fails the write fails and nothing lands only in L1.
+
 ## Capping L1 TTL
 
-L1 is a hot mirror, not the source of truth. Cap how long a value may live locally
-so a long-lived L2 entry doesn't get pinned in stale local memory:
+L1 is a hot mirror, not the source of truth. A value lives locally for at most
+**60 seconds** by default, so a long-lived L2 entry doesn't get pinned in stale
+local memory. Tighten or loosen that bound with `l1MaxTtl`, or pass
+`Ttl::forever()` to opt out:
 
 ```php
 use Silviooosilva\CacheerPhp\Kernel\Ttl;
@@ -51,6 +55,11 @@ this worker's L1 could still hold a stale copy. `TieredStore` uses a shared
 **generation token**: bulk invalidations bump the generation, and an L1 entry from
 an older generation is treated as a miss. Long-running workers therefore pick up
 invalidations without restarting.
+
+A **single-key** write or delete by another worker does not bump the generation, so
+this worker may keep serving its L1 copy until that copy lapses — at most
+`l1MaxTtl` (60 seconds by default). That is the L1 staleness bound; lower
+`l1MaxTtl` if your data can't tolerate it.
 
 ## Tiering is not resilience
 

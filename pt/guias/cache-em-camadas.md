@@ -34,11 +34,14 @@ Escritas e deletes vão para **ambas** as camadas para não divergirem:
 - `delete()` remove das duas.
 - `clear()` limpa as duas.
 
+O L2 é gravado primeiro, então se ele falhar a escrita falha e nada fica só no L1.
+
 ## Limitando o TTL do L1
 
-O L1 é um espelho quente, não a fonte da verdade. Limite quanto tempo um valor pode
-viver localmente para que uma entrada de vida longa no L2 não fique presa em memória
-local stale:
+O L1 é um espelho quente, não a fonte da verdade. Um valor vive localmente por no
+máximo **60 segundos** por padrão, para que uma entrada de vida longa no L2 não fique
+presa em memória local stale. Ajuste esse limite com `l1MaxTtl`, ou passe
+`Ttl::forever()` para desativá-lo:
 
 ```php
 use Silviooosilva\CacheerPhp\Kernel\Ttl;
@@ -53,6 +56,11 @@ o L1 deste worker poderia ainda ter uma cópia stale. `TieredStore` usa um **tok
 geração** compartilhado: invalidações em massa incrementam a geração, e uma entrada
 de L1 de uma geração antiga é tratada como miss. Workers de vida longa, portanto,
 captam invalidações sem reiniciar.
+
+Uma escrita ou remoção de **uma única chave** feita por outro worker não incrementa a
+geração, então este worker pode continuar servindo sua cópia no L1 até ela expirar
+— no máximo `l1MaxTtl` (60 segundos por padrão). Esse é o limite de staleness do L1;
+reduza `l1MaxTtl` se seus dados não toleram isso.
 
 ## Camadas não é resiliência
 

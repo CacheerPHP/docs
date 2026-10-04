@@ -109,6 +109,29 @@ final class MyStoreConformanceTest extends StoreConformance
 Se passar, sua store compõe com `Cacheer`, escopos, camadas, resiliência, os adaptadores
 PSR e a CLI exatamente como as nativas.
 
+### Rodando a partir do seu projeto
+
+A suíte vem no pacote em `tests/Support/`, mas o Composer nunca carrega o
+`autoload-dev` de uma dependência, então mapeie-a no **seu** `composer.json` e instale
+um executor de testes:
+
+```json
+{
+    "require-dev": {
+        "phpunit/phpunit": "^12.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\Support\\": "vendor/silviooosilva/cacheer-php/tests/Support/"
+        }
+    }
+}
+```
+
+Depois rode `composer dump-autoload` e execute seu teste com `vendor/bin/phpunit`. O
+tempo na suíte vem do `FakeClock`, então sua store deve receber o clock (um
+`Contracts\Clock`) em vez de chamar `time()`.
+
 ## 5. Sendo listado como compatível
 
 Um adaptador da comunidade é listado como compatível quando passa a suíte de

@@ -9,10 +9,14 @@ migração é a renomeação. Se um serviço ainda não puder migrar, mantenha-o
 ## 1. Instalação
 
 ```sh
-composer require silviooosilva/cacheer-php:"6.x-dev"
+composer require silviooosilva/cacheer-php:"^6.0@RC"
 ```
 
-A linha 6.x é atualmente uma prévia de desenvolvimento. Esta restrição instala a API documentada aqui; uma instalação sem versão seleciona a v5 estável. Consulte o [suporte de versões](./suporte-de-versoes.md) para verificar o estado.
+Até a 6.0.0 ser marcada como estável, a flag `@RC` permite que o Composer escolha o
+release candidate; a mesma restrição passa para a 6.0 estável quando ela sair. Sem
+ela, o Composer instala a linha estável v5.
+
+Consulte o [suporte de versões](./suporte-de-versoes.md) para verificar o estado.
 
 
 A v6 exige PHP 8.3+. O núcleo instala sem clientes de backend; `ArrayStore` e

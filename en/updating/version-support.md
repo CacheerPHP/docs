@@ -6,7 +6,7 @@ Choose the documentation that matches the version installed in your application.
 
 | Line | Status | PHP | Installation |
 |---|---|---|---|
-| 6.x | Development preview; the instance-first API documented here | 8.3+ | `composer require silviooosilva/cacheer-php:"6.x-dev"` |
+| 6.x | Release candidate (6.0.0-RC); the instance-first API documented here | 8.3+ | `composer require silviooosilva/cacheer-php:"^6.0@RC"` |
 | 5.x | Published stable line; latest release is 5.2.0 | 8.2+ | `composer require silviooosilva/cacheer-php:"^5.2"` |
 
 The latest published stable release is [v5.2.0, released July 6, 2026](https://github.com/CacheerPHP/CacheerPHP/releases/tag/v5.2.0).

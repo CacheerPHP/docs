@@ -16,17 +16,23 @@ Given an entry created at time `T`:
 |---|---|
 | `0 .. fresh` (0–30s) | Serve the cached value directly. |
 | `fresh .. stale` (30–300s) | Serve the **stale** value immediately, and trigger **one** background refresh. |
-| `> stale` (>300s) | The entry is gone; recompute synchronously (single-flight). |
+| `> stale` (>300s) | Never served: recompute synchronously (single-flight). |
 
 Requirements: `0 < fresh < stale`. The value is stored with a hard TTL of `stale`,
-so "stale" data is never older than the `stale` window.
+and age is measured from the value's creation time, so a value older than the
+`stale` window is never served — even one written under the same key with a
+longer TTL, or promoted from another cache layer.
 
 ## Why it helps
 
 - **No latency cliff.** Users in the stale window get an instant response; only
   the background refresh pays the recompute cost.
-- **No stampede.** The refresh is coordinated by a lock, so exactly one worker
-  refreshes even under load.
+- **No stampede.** A burst of stale reads queues **one** refresh per key: the
+  refresh lock marks it pending until it finishes, fails, or can't be scheduled
+  (across processes, for as long as the lock's lease lasts). A queued refresh
+  re-checks freshness first, so it does nothing if the value was already
+  refreshed. On a store without locking, each stale read queues a task, but only
+  the first computes.
 
 ## Background vs. inline refresh
 
@@ -48,6 +54,23 @@ $cache = new Cacheer($store, executor: new AfterResponseDeferredExecutor());
 CacheerPHP never calls a refresh "background" unless a deferred executor that
 actually defers is active. With the sync executor, the refresh is documented — and
 behaves — as inline.
+
+### Long-running workers
+
+`AfterResponseDeferredExecutor` flushes on shutdown. In a worker that serves many
+requests or jobs in one process (queue workers, RoadRunner, Swoole, FrankenPHP
+worker mode), shutdown only happens at the end, so flush explicitly after each unit
+of work:
+
+```php
+$executor = new AfterResponseDeferredExecutor();
+$cache = new Cacheer($store, executor: $executor);
+
+foreach ($jobs as $job) {
+    handle($job, $cache);
+    $executor->flush(); // run this job's queued refreshes now
+}
+```
 
 ## `flexible()` vs. `remember()`
 

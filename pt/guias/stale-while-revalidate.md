@@ -16,17 +16,23 @@ Dada uma entrada criada no tempo `T`:
 |---|---|
 | `0 .. fresh` (0–30s) | Serve o valor cacheado diretamente. |
 | `fresh .. stale` (30–300s) | Serve o valor **stale** na hora e dispara **um** refresh em segundo plano. |
-| `> stale` (>300s) | A entrada acabou; recalcula de forma síncrona (single-flight). |
+| `> stale` (>300s) | Nunca é servido: recalcula de forma síncrona (single-flight). |
 
-Requisitos: `0 < fresh < stale`. O valor é guardado com um TTL duro de `stale`, então
-o dado "stale" nunca é mais velho que a janela `stale`.
+Requisitos: `0 < fresh < stale`. O valor é guardado com um TTL duro de `stale`, e a
+idade é medida a partir da criação do valor, então um valor mais velho que a janela
+`stale` nunca é servido — nem um gravado sob a mesma chave com TTL maior, nem um
+promovido de outra camada de cache.
 
 ## Por que ajuda
 
 - **Sem penhasco de latência.** Usuários na janela stale recebem resposta instantânea;
   só o refresh em segundo plano paga o custo do recálculo.
-- **Sem estampede.** O refresh é coordenado por um lock, então exatamente um worker
-  recarrega, mesmo sob carga.
+- **Sem estampede.** Uma rajada de leituras stale enfileira **um** refresh por
+  chave: o lock de refresh o marca como pendente até terminar, falhar ou não poder
+  ser agendado (entre processos, enquanto durar a concessão do lock). Um refresh
+  enfileirado verifica o frescor antes, então não faz nada se o valor já foi
+  renovado. Num store sem locks, cada leitura stale enfileira uma tarefa, mas só a
+  primeira calcula.
 
 ## Refresh em segundo plano vs. inline
 
@@ -47,6 +53,23 @@ $cache = new Cacheer($store, executor: new AfterResponseDeferredExecutor());
 
 O CacheerPHP nunca chama um refresh de "background" a menos que um executor deferido
 que de fato defira esteja ativo.
+
+### Workers de longa duração
+
+O `AfterResponseDeferredExecutor` descarrega no shutdown. Num worker que atende
+muitas requisições ou jobs no mesmo processo (workers de fila, RoadRunner, Swoole,
+modo worker do FrankenPHP), o shutdown só acontece no fim, então descarregue
+explicitamente após cada unidade de trabalho:
+
+```php
+$executor = new AfterResponseDeferredExecutor();
+$cache = new Cacheer($store, executor: $executor);
+
+foreach ($jobs as $job) {
+    handle($job, $cache);
+    $executor->flush(); // executa agora os refreshes enfileirados deste job
+}
+```
 
 ## `flexible()` vs. `remember()`
 

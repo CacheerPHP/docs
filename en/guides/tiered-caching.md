@@ -21,6 +21,9 @@ $cache = Cacheer::tiered(
 3. Miss in both → a real miss.
 
 Subsequent reads in the same process are served from L1 without touching L2.
+A promoted copy keeps the value's original creation time and absolute expiry, so
+its age — and therefore `flexible()` freshness — does not restart when it moves
+into L1, even when L1's TTL is capped.
 
 ## Writes, deletes, clears
 

@@ -62,6 +62,11 @@ $policy = CachePolicy::defaults()->withTtl('1 hour')->withNegativeTtl('30 second
 $cache->remember('user:999', null, fn () => $users->find(999)); // null cached 30s, a hit 1h
 ```
 
+Negative caching only ever **shortens** a lifetime. An explicit forever
+(`forever()`, `rememberForever()`, or `'forever'`) stays forever even for an empty
+value, and an explicit TTL already shorter than the negative TTL is kept: with
+`withNegativeTtl('30 seconds')`, `set('k', null, 5)` lives 5 seconds, not 30.
+
 ## Serve-stale-on-error — `withServeStaleOnError()`
 
 Defines a grace window after logical expiry during which, **if a refresh fails**, the

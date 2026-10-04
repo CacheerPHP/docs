@@ -22,6 +22,9 @@ $cache = Cacheer::tiered(
 3. Miss nos dois → um miss real.
 
 Leituras seguintes no mesmo processo são servidas pelo L1 sem tocar no L2.
+Uma cópia promovida mantém o horário de criação original e a expiração absoluta do
+valor, então sua idade — e, portanto, o frescor de `flexible()` — não recomeça ao
+entrar no L1, mesmo com o TTL do L1 limitado.
 
 ## Escritas, deletes, clears
 

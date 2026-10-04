@@ -63,6 +63,11 @@ $policy = CachePolicy::defaults()->withTtl('1 hour')->withNegativeTtl('30 second
 $cache->remember('user:999', null, fn () => $users->find(999)); // null cacheado 30s, um hit 1h
 ```
 
+O cache negativo só **encurta** um tempo de vida. Um forever explícito (`forever()`,
+`rememberForever()` ou `'forever'`) continua forever mesmo para um valor vazio, e um
+TTL explícito já menor que o TTL negativo é mantido: com
+`withNegativeTtl('30 seconds')`, `set('k', null, 5)` vive 5 segundos, não 30.
+
 ## Serve-stale-on-error — `withServeStaleOnError()`
 
 Define uma janela de graça após a expiração lógica durante a qual, **se um refresh

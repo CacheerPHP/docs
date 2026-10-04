@@ -66,8 +66,6 @@ data outside its configured keyspace.
 - No hidden filesystem, environment, timezone, schema, or network side effects.
 - `composer analyse` and `composer lint` pass.
 - Relevant examples and migration notes are updated.
-- Performance-sensitive changes include before/after benchmark evidence
-  (`composer benchmark:baseline`).
 
 ## Reporting
 

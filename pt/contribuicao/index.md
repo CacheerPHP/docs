@@ -67,7 +67,6 @@ deve varrer ou limpar dados fora do seu keyspace configurado.
 - Sem efeitos colaterais ocultos de filesystem, ambiente, timezone, schema ou rede.
 - `composer analyse` e `composer lint` passam.
 - Exemplos e notas de migração relevantes são atualizados.
-- Mudanças sensíveis a performance incluem evidência de benchmark antes/depois.
 
 ## Reportando
 

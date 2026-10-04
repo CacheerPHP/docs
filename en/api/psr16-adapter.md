@@ -28,8 +28,15 @@ $psr16->clear();
 
 Spec details honored:
 
-- Reserved key characters (`{}()/\@:`) throw `CacheInvalidArgumentException`
-  (which implements the PSR-16 *and* PSR-6 `InvalidArgumentException`).
+- Every invalid key throws `CacheInvalidArgumentException` (which implements the
+  PSR-16 *and* PSR-6 `InvalidArgumentException`): reserved characters
+  (`{}()/\@:`), an empty key, one over 1,024 bytes or with control characters,
+  and a non-string key in a batch call. A TTL beyond the platform limit throws it
+  too. Both adapters behave the same.
+- Write methods (`set`, `delete`, `clear`, and the `*Multiple` variants; PSR-6
+  `save`, `deleteItem(s)`, `clear`, `commit`) return `false` when the store
+  fails, as the specs require. Reads still throw on a store failure rather than
+  hide an outage behind the default.
 - A `null` or non-positive integer TTL: `null` means forever; `<= 0` deletes the
   key (as the spec requires).
 - A cached `null` is returned as a hit, distinct from the default on a miss.
@@ -61,6 +68,12 @@ $pool->commit();
 `Psr6Item::expiresAfter()` is clock-agnostic (relative), while
 `expiresAt(DateTimeInterface)` pins an absolute expiry; the pool resolves both
 against its injected clock, so PSR-6 expiry is deterministic under a `FakeClock`.
+
+A deferred item is visible before `commit()`: `getItem()` returns it as a hit and
+`hasItem()` is true until it expires. `saveDeferred()` queues a copy and starts a
+relative expiry right away, so changing the item afterwards does not alter the
+queued value, and an item that expires while deferred is not stored.
+`deleteItem()` and `clear()` discard queued items.
 
 ## Which one?
 

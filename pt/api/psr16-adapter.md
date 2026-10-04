@@ -29,8 +29,15 @@ $psr16->clear();
 
 Detalhes de spec honrados:
 
-- Caracteres reservados na chave (`{}()/\@:`) lançam `CacheInvalidArgumentException`
-  (que implementa a `InvalidArgumentException` do PSR-16 *e* do PSR-6).
+- Toda chave inválida lança `CacheInvalidArgumentException` (que implementa a
+  `InvalidArgumentException` do PSR-16 *e* do PSR-6): caracteres reservados
+  (`{}()/\@:`), chave vazia, chave com mais de 1.024 bytes ou com caracteres de
+  controle, e uma chave que não é string numa chamada em lote. Um TTL além do limite
+  da plataforma também a lança. Os dois adaptadores se comportam igual.
+- Métodos de escrita (`set`, `delete`, `clear` e as variantes `*Multiple`; no PSR-6
+  `save`, `deleteItem(s)`, `clear`, `commit`) retornam `false` quando o store falha,
+  como as specs exigem. Leituras continuam lançando numa falha do store, em vez de
+  esconder uma indisponibilidade atrás do padrão.
 - TTL `null` significa para sempre; `<= 0` apaga a chave (como a spec exige).
 - Um `null` cacheado é retornado como hit, distinto do padrão num miss.
 
@@ -61,6 +68,12 @@ $pool->commit();
 `Psr6Item::expiresAfter()` é agnóstico ao clock (relativo), enquanto
 `expiresAt(DateTimeInterface)` fixa uma expiração absoluta; o pool resolve ambos
 contra o clock injetado, então a expiração PSR-6 é determinística sob um `FakeClock`.
+
+Um item deferido é visível antes do `commit()`: `getItem()` o retorna como hit e
+`hasItem()` é verdadeiro até ele expirar. `saveDeferred()` enfileira uma cópia e
+inicia a expiração relativa na hora, então alterar o item depois não muda o valor
+enfileirado, e um item que expira enquanto deferido não é gravado. `deleteItem()` e
+`clear()` descartam itens enfileirados.
 
 ## Qual usar?
 

@@ -115,5 +115,12 @@ install the monitor, and wire observability explicitly with
   ```
 
 - Listener failures are **isolated**: `EventBus` wraps every listener in a
-  try/catch, so a broken metrics or logging listener can never break a cache
-  operation.
+  try/catch, and every dispatch — from `InstrumentedStore`, the kernel, and
+  `TieredStore` — is isolated too, so a broken listener or custom dispatcher
+  (e.g. a PSR-14 bridge) can never fail a completed operation or mask a real
+  backend error.
+- Monitoring does not change behavior: an instrumented store forwards batch calls
+  to the inner store's native `getMany`/`setMany`/`deleteMany`, so a database
+  batch still rolls back as a whole, and events are emitted per key afterwards.
+- `bytes_written` counts writes only; hit events carry the read size but do not
+  add to it.

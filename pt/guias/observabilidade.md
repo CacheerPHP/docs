@@ -114,5 +114,13 @@ não instale o monitor, e conecte a observabilidade explicitamente com
   ```
 
 - Falhas de listeners são **isoladas**: o `EventBus` embrulha cada listener em um
-  try/catch, então um listener de métricas ou logging quebrado nunca quebra uma
-  operação de cache.
+  try/catch, e todo dispatch — do `InstrumentedStore`, do núcleo e do
+  `TieredStore` — também é isolado, então um listener quebrado ou um dispatcher
+  personalizado (ex.: uma ponte PSR-14) nunca faz falhar uma operação concluída nem
+  mascara um erro real do backend.
+- O monitoramento não muda o comportamento: um store instrumentado repassa as
+  chamadas em lote para o `getMany`/`setMany`/`deleteMany` nativo do store interno,
+  então um lote no banco continua sendo desfeito por inteiro, e os eventos são
+  emitidos por chave depois.
+- `bytes_written` conta apenas escritas; eventos de hit levam o tamanho lido, mas
+  não somam nele.

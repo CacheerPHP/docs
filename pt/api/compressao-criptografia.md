@@ -27,6 +27,17 @@ uma exceção em vez de retornar dados corrompidos ou não autenticados.
 $pipeline = PipelineConfig::default()->withJsonSerializer();
 ```
 
+O `PhpSerializer` permite todas as classes por padrão, então sem criptografia o
+backend é confiável: quem puder escrever nele pode plantar objetos que serão
+desserializados na leitura. Se o backend for compartilhado, habilite a criptografia
+ou restrinja as classes:
+
+```php
+use Silviooosilva\CacheerPhp\Storage\Serializer\PhpSerializer;
+
+$pipeline = PipelineConfig::default()->withSerializer(new PhpSerializer(allowedClasses: false));
+```
+
 ## Compressão
 
 Gzip opcional, útil para payloads grandes. A descompressão é **limitada** (respeita
@@ -56,6 +67,10 @@ $pipeline = PipelineConfig::default()->withKeyring($keyring);
 - Novas gravações usam a chave **ativa**; o id da chave é guardado no envelope.
 - Entradas antigas escritas com uma chave aposentada ainda descriptografam enquanto
   o id continuar no keyring — então você rotaciona sem flush.
+- Um pipeline que criptografa lê **apenas** envelopes criptografados: um envelope em
+  texto puro lança `UnsupportedEnvelopeException`, então ninguém contorna a
+  autenticação gravando um envelope que declara "sem criptografia". Ao ativar a
+  criptografia num cache existente, limpe-o antes (ou use um novo keyspace).
 - Requer `ext-openssl`.
 
 > Nunca cacheie segredos em uma store sem criptografia habilitada. O pipeline
@@ -68,7 +83,10 @@ $pipeline = PipelineConfig::default()->withMaxValueBytes(2_000_000);
 ```
 
 Um valor cujo formato serializado excede o limite lança `ValueTooLargeException` na
-escrita, e o mesmo limite delimita a descompressão na leitura.
+escrita. O mesmo limite vale na leitura para todo pipeline — puro, comprimido ou
+criptografado — antes de qualquer desserialização, e a descompressão para assim que
+ele é excedido. `0` significa sem limite; um limite negativo lança
+`InvalidArgumentException`.
 
 ## Dados que não são envelope
 

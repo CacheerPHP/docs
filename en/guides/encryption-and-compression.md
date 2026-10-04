@@ -72,6 +72,9 @@ $pipeline = PipelineConfig::default()
 - Tampering, a wrong key, truncation, or an over-limit value produce
   **deterministic, typed failures** — never silent corruption or unauthenticated
   data.
+- An encrypting pipeline refuses plaintext envelopes, so clear the cache (or use
+  a new keyspace) when you turn encryption on for an existing one.
+- The value limit applies on read to every pipeline, not only compressed ones.
 - The default pipeline does **not** encrypt or compress. Opt in explicitly; never
   cache secrets without encryption.
 - See [KNOWN_LIMITATIONS](../updating/index.md) and the

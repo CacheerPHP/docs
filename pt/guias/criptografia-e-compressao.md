@@ -71,6 +71,9 @@ $pipeline = PipelineConfig::default()
 - Adulteração, chave errada, truncamento ou um valor acima do limite produzem
   **falhas determinísticas e tipadas** — nunca corrupção silenciosa ou dado não
   autenticado.
+- Um pipeline que criptografa recusa envelopes em texto puro, então limpe o cache
+  (ou use um novo keyspace) ao ativar a criptografia num cache existente.
+- O limite de tamanho vale na leitura para todo pipeline, não só os comprimidos.
 - O pipeline padrão **não** criptografa nem comprime. Opte explicitamente; nunca
   cacheie segredos sem criptografia.
 - Veja a [referência de Compressão e criptografia](../api/compressao-criptografia.md)

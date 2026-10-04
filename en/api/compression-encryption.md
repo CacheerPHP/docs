@@ -27,6 +27,16 @@ exception instead of returning corrupt or unauthenticated data.
 $pipeline = PipelineConfig::default()->withJsonSerializer();
 ```
 
+`PhpSerializer` allows every class by default, so without encryption the backend
+is trusted: anyone who can write to it can plant objects that are unserialized on
+read. If the backend is shared, enable encryption or restrict the classes:
+
+```php
+use Silviooosilva\CacheerPhp\Storage\Serializer\PhpSerializer;
+
+$pipeline = PipelineConfig::default()->withSerializer(new PhpSerializer(allowedClasses: false));
+```
+
 ## Compression
 
 Optional gzip, useful for large payloads. Decompression is **bounded** (it honors
@@ -56,6 +66,10 @@ $pipeline = PipelineConfig::default()->withKeyring($keyring);
 - New writes use the **active** key; the key id is stored in the envelope.
 - Old entries written under a retired key still decrypt as long as that key id
   remains in the keyring — so you can rotate without a flush.
+- An encrypting pipeline reads **only** encrypted envelopes: a plaintext one
+  throws `UnsupportedEnvelopeException`, so nobody can bypass authentication by
+  writing an envelope that declares "no encryption". When you turn encryption on
+  for an existing cache, clear it first (or use a new keyspace).
 - Requires `ext-openssl`.
 
 > Never cache secrets in a store without encryption enabled. The default pipeline
@@ -68,7 +82,10 @@ $pipeline = PipelineConfig::default()->withMaxValueBytes(2_000_000);
 ```
 
 A value whose serialized form exceeds the limit throws `ValueTooLargeException`
-on write, and the same limit bounds decompression on read.
+on write. The same limit applies on read to every pipeline — plain, compressed, or
+encrypted — before anything is unserialized, and decompression stops as soon as
+it is exceeded. `0` means no limit; a negative limit throws
+`InvalidArgumentException`.
 
 ## Non-envelope data
 

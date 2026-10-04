@@ -78,8 +78,8 @@ without it, wrapping a store can turn a working `remember()` into an exception.
 ## 3. Reuse the storage pipeline
 
 Encode values through an `EnvelopeCodec` from a [`PipelineConfig`](../api/config.md)
-to get serialization, optional compression, authenticated encryption, size limits,
-and v5 read compatibility for free:
+to get serialization, optional compression, authenticated encryption, and size
+limits for free:
 
 ```php
 $codec = PipelineConfig::default()->withGzip()->codec();

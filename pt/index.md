@@ -63,8 +63,8 @@ Para assinaturas de métodos, consulte a [referência da API](./api/index.md). P
   [rotação de chaves](./guias/criptografia-e-compressao.md).
 - **Padrões e ferramentas.** Adaptadores [PSR-16 e PSR-6](./api/psr16-adapter.md),
   log PSR-3, ponte PSR-14 e uma [CLI `cacheer`](./guias/cli.md).
-- **Migração.** Conjunto Rector opcional mais reescrita na leitura de payloads v5
-  — a renomeação é a migração, sem shim de runtime. Veja o
+- **Migração.** Conjunto Rector opcional e uma atualização com keyspace frio — a
+  renomeação é a migração, sem shim de runtime. Veja o
   [guia de atualização](./atualizacao/index.md).
 
 ## Breaking changes em resumo

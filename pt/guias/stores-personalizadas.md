@@ -79,8 +79,7 @@ isso, embrulhar uma store pode transformar um `remember()` funcional em exceçã
 
 Codifique valores por um `EnvelopeCodec` de um
 [`PipelineConfig`](../api/configuracao.md) para ganhar serialização, compressão
-opcional, criptografia autenticada, limites de tamanho e compatibilidade de leitura v5
-de graça:
+opcional, criptografia autenticada e limites de tamanho de graça:
 
 ```php
 $codec = PipelineConfig::default()->withGzip()->codec();

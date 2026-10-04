@@ -61,8 +61,8 @@ For method signatures, use the [API reference](./api/index.md). For runnable exa
   a versioned, tamper-evident envelope, with [key rotation](./guides/encryption-and-compression.md).
 - **Standards & tooling.** [PSR-16 and PSR-6](./api/psr16-adapter.md) adapters,
   PSR-3 logging, a PSR-14 bridge, and a [`cacheer` CLI](./guides/cli.md).
-- **Migration.** An optional Rector rename set plus rewrite-on-read for v5
-  payloads — the rename is the migration, no runtime shim. See the
+- **Migration.** An optional Rector rename set and a cold-keyspace upgrade — the
+  rename is the migration, no runtime shim. See the
   [migration guide](./updating/index.md).
 
 ## Breaking changes at a glance

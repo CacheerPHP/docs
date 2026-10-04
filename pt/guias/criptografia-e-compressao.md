@@ -74,4 +74,4 @@ $pipeline = PipelineConfig::default()
 - O pipeline padrão **não** criptografa nem comprime. Opte explicitamente; nunca
   cacheie segredos sem criptografia.
 - Veja a [referência de Compressão e criptografia](../api/compressao-criptografia.md)
-  para o formato do envelope e a compatibilidade de leitura v5.
+  para o formato do envelope.

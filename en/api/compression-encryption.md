@@ -70,20 +70,9 @@ $pipeline = PipelineConfig::default()->withMaxValueBytes(2_000_000);
 A value whose serialized form exceeds the limit throws `ValueTooLargeException`
 on write, and the same limit bounds decompression on read.
 
-## Reading v5 data
+## Non-envelope data
 
-During a migration you can read values written by CacheerPHP v5 by attaching a
-`V5PayloadReader` that mirrors the compression/encryption your v5 app used (v5
-payloads are not self-describing):
-
-```php
-use Silviooosilva\CacheerPhp\Storage\Compat\V5PayloadReader;
-
-$pipeline = PipelineConfig::default()->withV5Reader(new V5PayloadReader(compression: true));
-```
-
-`FileStore` and `DatabaseStore` can additionally **rewrite** legacy values in the
-v6 envelope on read (`migrateLegacyOnRead: true`). See the
-[migration guide](../updating/index.md#5-data-compatibility-and-rewrite-on-read).
-Note that v5 used unauthenticated AES-256-CBC — a wrong key surfaces only as a
-failed `unserialize`, never cryptographically.
+`decode()` accepts only v6 envelopes. Any other blob — including a payload written
+by CacheerPHP v5 — throws `UnsupportedEnvelopeException` instead of being decoded,
+whatever stages the pipeline has. v6 does not read v5's cached data; see the
+[migration guide](../updating/index.md#5-cached-data-v6-starts-cold).

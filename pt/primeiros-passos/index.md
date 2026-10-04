@@ -157,8 +157,8 @@ Veja [Adaptadores PSR-16 e PSR-6](../api/psr16-adapter.md).
 ## Vindo da v5?
 
 A migração é quase toda mecânica — renomeie os métodos v5 para os nomes v6
-(`putCache`→`set`, `getCache`→`get`, namespace posicional → `scope()`), e deixe
-seus dados já cacheados se atualizarem sozinhos via reescrita na leitura. Um
+(`putCache`→`set`, `getCache`→`get`, namespace posicional → `scope()`). Os dados
+em cache começam frios: a v6 não lê entradas v5. Um
 conjunto Rector opcional automatiza as renomeações comuns; se um serviço ainda não
 puder migrar, mantenha-o em `^5.2`.
 

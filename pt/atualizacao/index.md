@@ -2,8 +2,8 @@
 
 O CacheerPHP 6 é uma reescrita baseada em instâncias. A migração é quase toda
 mecânica: renomeie os métodos v5 para os nomes v6 (um conjunto Rector automatiza os
-comuns), mova o namespace posicional para `scope()`, e deixe seus dados já cacheados
-se atualizarem sozinhos via reescrita na leitura. Não há shim de runtime da v5 — a
+comuns), mova o namespace posicional para `scope()`, e comece a v6 com um cache frio no
+seu próprio keyspace. Não há shim de runtime da v5 — a
 migração é a renomeação. Se um serviço ainda não puder migrar, mantenha-o em `^5.2`.
 
 ## 1. Instalação
@@ -95,27 +95,30 @@ Não há shim de runtime da v5, mas você não precisa converter tudo de uma vez
 - Se um serviço inteiro ainda não puder mudar, fixe-o em `^5.2` e migre depois. v5 e
   v6 são linhas major diferentes, não duas APIs numa instalação.
 
-## 5. Compatibilidade de dados e reescrita na leitura
+## 5. Dados em cache: a v6 começa fria
 
-A v6 grava um envelope autenticado e versionado, mas ainda consegue **ler** valores
-v5. Construa o pipeline com um `V5PayloadReader` que corresponda à
-compressão/criptografia do seu app v5, e habilite a reescrita na leitura para
-recodificar valores antigos no envelope v6:
+A v6 não lê os dados em cache da v5. Os layouts de armazenamento e os formatos de
+payload são diferentes, então uma store v6 nunca enxerga entradas v5: o primeiro
+pedido v6 de cada chave é um miss, e o valor é recalculado e gravado no formato v6.
+Cache é dado derivado, então nada se perde — espere um período de aquecimento com
+mais misses, como após um flush.
 
-```php
-use Silviooosilva\CacheerPhp\Config\PipelineConfig;
-use Silviooosilva\CacheerPhp\Storage\Compat\V5PayloadReader;
-use Silviooosilva\CacheerPhp\Stores\FileStore;
+| Backend | Layout v5 | Layout v6 |
+|---|---|---|
+| Arquivo | `{dir}/[md5(namespace)/]md5(chave).cache` | `{dir}/entries/…` e `{dir}/locks/…` |
+| Banco | tabela `cacheer_table` (padrão) | tabela `cacheer_store` (padrão), schema novo |
+| Redis | `{namespace}[ns:]chave`, tags como `tag:…` | `{prefix}:e:…`, `{prefix}:t:…`, `{prefix}:l:…` |
 
-$pipeline = PipelineConfig::default()->withV5Reader(new V5PayloadReader(compression: true));
-$store = new FileStore('/var/cache', $pipeline->codec(), migrateLegacyOnRead: true);
-```
+Mantenha os dois keyspaces separados:
 
-- Os payloads v5 usam AES-256-**CBC** não autenticado; uma chave errada aparece
-  como falha de `unserialize`, não criptograficamente. Novas gravações usam o
-  envelope v6 autenticado.
-- `FileStore` e `DatabaseStore` suportam reescrita na leitura; entradas Redis
-  migram na próxima gravação.
+- **Arquivo**: aponte a v6 para um diretório novo (compartilhar funciona — a v6 só
+  mexe em `entries/` e `locks/` — mas um separado torna a limpeza trivial).
+- **Banco**: use um nome de tabela diferente da tabela v5.
+- **Redis**: use um `$prefix` v6 diferente do namespace v5, ou outro banco lógico.
+
+Depois da janela de rollback, apague os dados v5: o diretório de cache v5, a tabela
+v5 ou as chaves Redis v5 (pelo namespace com `SCAN`/`UNLINK`, ou deixando os TTLs
+expirarem).
 
 ## 6. Migração e rollback do banco
 
@@ -135,9 +138,11 @@ Veja o DDL sem executar: `cacheer migrate --dry-run`.
 
 ## 8. Plano de rollback
 
-A reescrita na leitura é opcional, então um rollout somente-leitura nunca altera
-dados v5. Para voltar: fixe `^5.2` novamente, mantenha o lock file/vendor anterior e
-limpe envelopes exclusivos da v6 (`cacheer clear --force`).
+A v6 nunca altera o keyspace da v5. Para voltar: fixe `^5.2` novamente, mantenha o
+lock file/vendor anterior e aponte a v5 para o keyspace original. A v6 também nunca
+atualizou nem invalidou entradas v5, então **limpe o cache v5 ao fazer rollback**,
+a menos que valores cacheados antes da atualização sejam aceitáveis. Depois remova o
+keyspace v6 (`cacheer clear --force`).
 
 ## Janela de suporte
 

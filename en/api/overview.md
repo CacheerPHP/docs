@@ -34,7 +34,7 @@ Storage pipeline
 | `Kernel\` | The value objects `Key`, `Scope`, `Ttl`, `CacheEntry`, plus `Capabilities` (the honest capability check) |
 | `Contracts\` | `Cache` (what applications type-hint), `Store` and the capability interfaces (`BatchStore`, `TaggableStore`, `LockingStore`, `AtomicStore`, `TouchStore`, `PrunableStore`, `InspectableStore`, `FlushableScopeStore`, `CapabilityAware`), plus `Clock`, `Lock`, `DeferredExecutor`, `EventDispatcher`, `RedisConnection` |
 | `Stores\` | `ArrayStore`, `FileStore`, `DatabaseStore`, `RedisStore`, and the decorators `TieredStore`, `ResilientStore`, `InstrumentedStore` |
-| `Storage\` | `Envelope`, `EnvelopeCodec`, serializers, compression, encryption, key encoding, and the v5 reader |
+| `Storage\` | `Envelope`, `EnvelopeCodec`, serializers, compression, encryption, and key encoding |
 | `Config\` | `PipelineConfig`, `CachePolicy` |
 | `Support\` | `SystemClock`, `CircuitBreaker`, deferred executors, `CacheDataFormatter`, `FormattedCacheer` |
 | `Observability\` | `CacheEvent`, `CacheEventType`, `EventBus`, `MetricsCollector`, PSR-3/PSR-14 bridges |

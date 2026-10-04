@@ -76,4 +76,4 @@ $pipeline = PipelineConfig::default()
   cache secrets without encryption.
 - See [KNOWN_LIMITATIONS](../updating/index.md) and the
   [Compression & encryption reference](../api/compression-encryption.md) for the
-  envelope format and v5 read compatibility.
+  envelope format.

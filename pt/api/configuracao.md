@@ -60,14 +60,12 @@ uma nova instância.
 ```php
 use Silviooosilva\CacheerPhp\Config\PipelineConfig;
 use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
-use Silviooosilva\CacheerPhp\Storage\Compat\V5PayloadReader;
 
 $pipeline = PipelineConfig::default()          // serializer PHP, sem compressão/criptografia
     ->withJsonSerializer()
     ->withGzip(level: 6)
     ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current')) // AES-256-GCM
-    ->withMaxValueBytes(2_000_000)
-    ->withV5Reader(new V5PayloadReader());
+    ->withMaxValueBytes(2_000_000);
 
 $cache = Cacheer::file('/var/cache/app', $pipeline);
 ```
@@ -79,7 +77,6 @@ $cache = Cacheer::file('/var/cache/app', $pipeline);
 | `withCompressor(Compressor)` / `withGzip(int $level = 6)` | Adiciona compressão |
 | `withEncrypter(Encrypter)` / `withKeyring(Keyring)` | Adiciona criptografia autenticada |
 | `withMaxValueBytes(int)` | Impõe um tamanho serializado máximo na escrita |
-| `withV5Reader(V5PayloadReader)` | Habilita leitura de payloads v5 |
 | `codec()` | Constrói o `EnvelopeCodec` pronto (as stores chamam isto) |
 
 O pipeline é detalhado em [Compressão e criptografia](./compressao-criptografia.md) e

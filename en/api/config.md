@@ -65,14 +65,12 @@ returns a new instance, so a base config can be shared and specialized.
 ```php
 use Silviooosilva\CacheerPhp\Config\PipelineConfig;
 use Silviooosilva\CacheerPhp\Storage\Encryption\Keyring;
-use Silviooosilva\CacheerPhp\Storage\Compat\V5PayloadReader;
 
 $pipeline = PipelineConfig::default()          // PHP serializer, no compression/encryption
     ->withJsonSerializer()                     // or a custom Serializer
     ->withGzip(level: 6)                        // optional compression
     ->withKeyring(Keyring::fromPassphrases(['current' => $secret], 'current')) // AES-256-GCM
-    ->withMaxValueBytes(2_000_000)              // reject oversized values on write
-    ->withV5Reader(new V5PayloadReader());      // read v5 payloads during migration
+    ->withMaxValueBytes(2_000_000);             // reject oversized values on write
 
 $cache = Cacheer::file('/var/cache/app', $pipeline);
 ```
@@ -84,7 +82,6 @@ $cache = Cacheer::file('/var/cache/app', $pipeline);
 | `withCompressor(Compressor)` / `withGzip(int $level = 6)` | Add a compression stage |
 | `withEncrypter(Encrypter)` / `withKeyring(Keyring)` | Add authenticated encryption |
 | `withMaxValueBytes(int)` | Enforce a maximum serialized size on write |
-| `withV5Reader(V5PayloadReader)` | Enable reading legacy v5 payloads |
 | `codec()` | Build the ready `EnvelopeCodec` (stores call this) |
 
 The pipeline is covered in depth in

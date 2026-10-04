@@ -39,6 +39,27 @@ When the breaker is open and the fallback also misses, the result is a **miss** 
 never stale or fabricated data. Resilience buys availability, not a relaxation of
 correctness.
 
+## What fails over, and what doesn't
+
+- **Only outages fail over.** A PDO, Redis, or I/O failure counts against the
+  breaker and falls back. A bug (`TypeError`, an invalid argument) or bad data (a
+  corrupt or oversized payload, a counter overflow) is rethrown as is — failing
+  over would only hide it.
+- **The primary's result is authoritative.** Writes go to the primary and are
+  mirrored to the fallback on a best-effort basis (a fallback outage doesn't fail
+  the write). Only while the primary is unavailable does the fallback's result
+  stand.
+- **Counters and locks never fail over.** `increment()`, `compareAndSwap()`, and
+  `lock()` run on the primary alone, because a second, independent counter or lock
+  on the fallback would contradict it. While the primary is down they fail closed:
+  counters throw `StoreOperationFailedException`, and locks report "not acquired"
+  immediately, so `remember()` simply computes without single-flight.
+- **Recovery doesn't resurrect old data.** Keys written or deleted on the fallback
+  alone during an outage are invalidated on the primary before it serves again, and
+  an outage `clearScope()`/`clearTag()` is replayed. After an outage `clear()`, or
+  more than 1,000 such writes, the primary is cleared instead. This is tracked per
+  process, so each worker reconciles its own outage writes.
+
 ## Degraded health, no secrets
 
 You can observe the breaker's state (closed/open/half-open) to drive a health
@@ -56,8 +77,10 @@ They compose. A common shape is a local L1, a shared L2, and a resilient wrapper
 an L2 outage degrades to the fallback instead of erroring:
 
 ```php
-$shared = Cacheer::resilient($redisStore, new ArrayStore($clock));
-$cache  = Cacheer::tiered(new ArrayStore($clock), $shared->/* store */);
+use Silviooosilva\CacheerPhp\Stores\ResilientStore;
+
+$shared = new ResilientStore($redisStore, new ArrayStore($clock), clock: $clock);
+$cache  = Cacheer::tiered(new ArrayStore($clock), $shared, clock: $clock);
 ```
 
 See [Observability](./observability.md) to emit `cache.failure` events when the

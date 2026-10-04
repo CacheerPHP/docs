@@ -24,7 +24,6 @@ composer test            # service-free unit suite (default)
 composer test:kernel     # v6 kernel (Cacheer, adapters, CLI, rehearsals)
 composer test:contract   # store conformance (Array, File)
 composer test:storage    # the storage pipeline / envelope
-composer test:concurrency  # lock and counter contention harnesses
 composer test:integration  # Redis / database (needs services)
 composer test:all        # everything
 ```

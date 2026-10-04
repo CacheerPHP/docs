@@ -64,7 +64,9 @@ try {
 ```
 
 Locks carregam um TTL e autoexpiram (sem deadlock se um dono travar), e a liberação é
-do dono. Nomes de lock têm namespace por escopo, então
+do dono. A exceção à expiração é o `FileStore`: seus locks são locks `flock` mantidos
+pelo processo, liberados pelo sistema operacional quando o dono libera ou encerra,
+então o TTL nunca expira um handle ativo. Nomes de lock têm namespace por escopo, então
 `$cache->in('tenant-a')->lock('import')` e `$cache->in('tenant-b')->lock('import')`
 não disputam. Veja a [referência de Locks](../api/locks.md).
 

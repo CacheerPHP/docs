@@ -36,6 +36,17 @@ Cacheer::resilient(Store $primary, Store $fallback, ?CircuitBreaker $breaker = n
 Cacheer::instrumented(Store $store, EventDispatcher $events, bool $captureValues = false, ?callable $redactor = null, ?Clock $clock = null): Cacheer
 ```
 
+A Redis `$prefix` is matched literally, so stores with different prefixes never
+reach each other's keys. It cannot contain the segments `:e`, `:t`, `:l`, or
+`:lk` (for example `app:t`), which are reserved for the store's own keyspaces;
+such a prefix throws `InvalidArgumentException`. Namespaced prefixes like
+`app:cache` are fine.
+
+A database store keeps scopes and tags in 255-character columns, so it rejects a
+scope path (segments joined by `/`) or a tag longer than that before writing:
+`InvalidScopeException` for scopes, `InvalidArgumentException` for tags. A scoped
+tag includes its scope. The limit applies on every driver, including SQLite.
+
 Or construct directly with any store:
 
 ```php
@@ -142,7 +153,9 @@ public function add(string|Key $key, mixed $value, Ttl|DateInterval|int|string|n
 Stores **only if the key is absent**, returning `true` when this call was the one
 that stored it. When the store can lock, the check and the write are serialized,
 so it is a sound first-writer-wins across processes; otherwise it degrades to a
-single-process check.
+single-process check. If that lock cannot be acquired within 5 seconds, `add()`
+throws `StoreOperationFailedException` instead of reporting a win it cannot
+guarantee.
 
 ```php
 if ($cache->add('import:running', 1, ttl: 300)) {
@@ -209,7 +222,9 @@ Returns the cached value; on a miss, runs `$callback`, stores the result under
 `$ttl`, and returns it. When the store can lock, `remember()` is **single-flight**:
 one caller computes while the rest wait and read the result (no dogpile). Without
 locking it degrades to a plain compute-and-store — it never fails for lack of a
-lock, including when the store is wrapped in a decorator.
+lock, including when the store is wrapped in a decorator. If waiting for another
+caller's lock times out (5 seconds), it returns that caller's result when one has
+been stored, and otherwise computes the value itself.
 
 ```php
 $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));

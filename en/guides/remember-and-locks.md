@@ -65,7 +65,9 @@ try {
 ```
 
 Locks carry a TTL and self-expire (no deadlock if a holder crashes), and release
-is owner-scoped (a lock only deletes its own token). Lock names are namespaced by
+is owner-scoped (a lock only deletes its own token). `FileStore` is the exception
+to expiry: its locks are process-held `flock` locks that the operating system
+frees when the holder releases or exits, so the TTL never expires a live handle. Lock names are namespaced by
 scope, so `$cache->in('tenant-a')->lock('import')` and
 `$cache->in('tenant-b')->lock('import')` do not contend. See the
 [Locks reference](../api/locks.md) for `acquire()`, `block()`, and `release()`.

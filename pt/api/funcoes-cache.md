@@ -35,6 +35,18 @@ Cacheer::resilient(Store $primary, Store $fallback, ?CircuitBreaker $breaker = n
 Cacheer::instrumented(Store $store, EventDispatcher $events, bool $captureValues = false, ?callable $redactor = null, ?Clock $clock = null): Cacheer
 ```
 
+O `$prefix` do Redis é comparado literalmente, então stores com prefixos
+diferentes nunca alcançam as chaves umas das outras. Ele não pode conter os
+segmentos `:e`, `:t`, `:l` ou `:lk` (por exemplo `app:t`), reservados para os
+keyspaces internos do store; um prefixo assim lança `InvalidArgumentException`.
+Prefixos com namespace, como `app:cache`, funcionam normalmente.
+
+Um store de banco de dados guarda escopos e tags em colunas de 255 caracteres,
+então rejeita, antes de escrever, um caminho de escopo (segmentos unidos por `/`)
+ou uma tag maior que isso: `InvalidScopeException` para escopos,
+`InvalidArgumentException` para tags. Uma tag com escopo inclui o escopo. O limite
+vale em todos os drivers, inclusive SQLite.
+
 Ou construa diretamente com qualquer store:
 
 ```php
@@ -137,7 +149,9 @@ public function add(string|Key $key, mixed $value, Ttl|DateInterval|int|string|n
 Armazena **apenas se a chave estiver ausente**, retornando `true` quando foi esta
 chamada que armazenou. Quando a store sabe travar, a verificação e a escrita são
 serializadas, então é um "primeiro que escreve vence" correto entre processos; caso
-contrário degrada para uma verificação de processo único.
+contrário degrada para uma verificação de processo único. Se esse lock não puder
+ser obtido em 5 segundos, `add()` lança `StoreOperationFailedException` em vez de
+reportar uma vitória que não pode garantir.
 
 ```php
 if ($cache->add('import:running', 1, ttl: 300)) {
@@ -204,7 +218,10 @@ Retorna o valor cacheado; no miss, executa `$callback`, armazena o resultado sob
 `$ttl` e o retorna. Quando a store sabe travar, `remember()` é **single-flight**:
 um chamador computa enquanto os demais aguardam e leem o resultado (sem dogpile).
 Sem travamento, degrada para um simples computar-e-armazenar — nunca falha por
-falta de lock, inclusive quando a store está embrulhada em um decorator.
+falta de lock, inclusive quando a store está embrulhada em um decorator. Se a
+espera pelo lock de outro chamador expirar (5 segundos), retorna o resultado desse
+chamador quando já foi armazenado e, caso contrário, computa o valor por conta
+própria.
 
 ```php
 $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));

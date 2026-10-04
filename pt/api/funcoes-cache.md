@@ -37,7 +37,7 @@ Cacheer::instrumented(Store $store, EventDispatcher $events, bool $captureValues
 
 O `$prefix` do Redis é comparado literalmente, então stores com prefixos
 diferentes nunca alcançam as chaves umas das outras. Ele não pode conter os
-segmentos `:e`, `:t`, `:l` ou `:lk` (por exemplo `app:t`), reservados para os
+segmentos `:e`, `:t`, `:l`, `:lk` ou `:kt` (por exemplo `app:t`), reservados para os
 keyspaces internos do store; um prefixo assim lança `InvalidArgumentException`.
 Prefixos com namespace, como `app:cache`, funcionam normalmente.
 
@@ -319,6 +319,12 @@ public function flushTag(string $tag): int
 Associam uma chave a tags e depois as invalidam em bloco; `flushTag()` retorna
 quantas entradas foram removidas. Os nomes de tag têm namespace por escopo, então
 dois escopos usando o mesmo nome não limpam um ao outro. Requer `TaggableStore`.
+
+Marque uma entrada depois de armazená-la: marcar uma chave que não está armazenada
+não registra nada. A associação dura até a entrada ser removida ou limpa, então uma
+tag antiga nunca remove um valor novo gravado depois sob a mesma chave; ela
+sobrevive a sobrescritas e à expiração, então um valor renovado por `remember()`
+continua marcado.
 
 ```php
 $cache->tag('product:1', 'products', 'catalog');

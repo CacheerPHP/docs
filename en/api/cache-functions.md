@@ -37,8 +37,8 @@ Cacheer::instrumented(Store $store, EventDispatcher $events, bool $captureValues
 ```
 
 A Redis `$prefix` is matched literally, so stores with different prefixes never
-reach each other's keys. It cannot contain the segments `:e`, `:t`, `:l`, or
-`:lk` (for example `app:t`), which are reserved for the store's own keyspaces;
+reach each other's keys. It cannot contain the segments `:e`, `:t`, `:l`, `:lk`,
+or `:kt` (for example `app:t`), which are reserved for the store's own keyspaces;
 such a prefix throws `InvalidArgumentException`. Namespaced prefixes like
 `app:cache` are fine.
 
@@ -321,6 +321,11 @@ public function flushTag(string $tag): int
 Associate a key with tags, then invalidate them in bulk; `flushTag()` returns how
 many entries were removed. Tag names are namespaced by scope, so two scopes using
 the same tag name do not flush each other. Requires `TaggableStore`.
+
+Tag an entry after storing it: tagging a key that isn't stored records nothing.
+Membership lasts until the entry is deleted or cleared, so an old tag never removes
+a new value written later under the same key; it survives overwrites and expiry,
+so a value refreshed by `remember()` stays tagged.
 
 ```php
 $cache->tag('product:1', 'products', 'catalog');

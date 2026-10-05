@@ -107,6 +107,16 @@ $cache = Cacheer::instrumented($store, $events);   // only this one reports
 
 ---
 
+## Explore the dashboard
+
+In Monitor 2.x, start with **Cache lifecycle** for stale responses, refreshes,
+promotions, and lock-wait timeouts. Open **Problem keys** to rank misses, errors,
+hits, or p95 latency, and **Health rules** to configure browser-local warnings.
+
+Metrics cover matching activity in the current log, independently of the event
+feed limit. See [Common Workflows](workflows.md) for diagnostics and
+[Configuration](configuration.md) for health-rule defaults and metadata limits.
+
 ## When nothing shows up
 
 The bridge runs at autoload in every request, so it can never warn or throw —

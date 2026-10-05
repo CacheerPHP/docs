@@ -107,6 +107,18 @@ $cache = Cacheer::instrumented($store, $events);   // só este reporta
 
 ---
 
+## Explorar o dashboard
+
+No Monitor 2.x, comece em **Cache lifecycle** para consultar valores antigos
+servidos, atualizações, promoções e timeouts de espera por locks. Abra
+**Problem keys** para ordenar misses, erros, hits ou latência p95, e
+**Health rules** para configurar avisos locais ao navegador.
+
+As métricas abrangem a atividade correspondente no log atual, independentemente
+do limite do fluxo. Consulte os [Fluxos Comuns](workflows.md) para diagnósticos
+e a [Configuração](configuration.md) para os valores padrão das regras e
+limitações dos metadados.
+
 ## Quando não aparece nada
 
 A ponte corre no autoload em cada pedido, por isso nunca pode avisar nem lançar

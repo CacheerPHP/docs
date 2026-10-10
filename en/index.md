@@ -1,6 +1,6 @@
 # CacheerPHP Documentation
 
-**Documentation: 6.x preview** | PHP 8.3+ | [Migration guide](./updating/index.md)
+**Documentation: 6.x stable** | PHP 8.3+ | [Migration guide](./updating/index.md)
 
 CacheerPHP 6 is an **instance-first** cache: a small `Cacheer` kernel over a minimal
 four-method `Store` contract, with everything else — batching, tags, locks, atomic

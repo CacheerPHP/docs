@@ -6,19 +6,17 @@ Escolha a documentação que corresponde à versão instalada na aplicação.
 
 | Linha | Estado | PHP | Instalação |
 |---|---|---|---|
-| 6.x | Release candidate (6.0.0-RC); a API baseada em instâncias documentada aqui | 8.3+ | `composer require silviooosilva/cacheer-php:"^6.0@RC"` |
-| 5.x | Linha estável publicada; a versão mais recente é a 5.2.0 | 8.2+ | `composer require silviooosilva/cacheer-php:"^5.2"` |
+| 6.x | Linha estável atual; começa na 6.0.0 | 8.3+ | `composer require silviooosilva/cacheer-php:"^6.0"` |
+| 5.x | Manutenção; a versão mais recente é a 5.2.0 | 8.2+ | `composer require silviooosilva/cacheer-php:"^5.2"` |
 
-A última versão estável publicada é a [v5.2.0, de 6 de julho de 2026](https://github.com/CacheerPHP/CacheerPHP/releases/tag/v5.2.0).
-O estado foi verificado em 3 de outubro de 2026. Consulte as [versões no GitHub](https://github.com/CacheerPHP/CacheerPHP/releases) para publicações e registos de alterações mais recentes.
-
-O ramo de desenvolvimento 6.x pode mudar antes de uma versão estável. É necessário indicar a restrição Composer para experimentar a API desta documentação; uma instalação sem versão seleciona atualmente o pacote estável 5.x.
+O CacheerPHP 6.0.0 é a versão estável da API baseada em instâncias documentada aqui.
+A restrição `^6.0` aceita atualizações estáveis da linha 6.x sem mudar de versão principal. Consulte as [versões no GitHub](https://github.com/CacheerPHP/CacheerPHP/releases) para notas de lançamento e registos de alterações.
 
 ## Suporte durante a migração
 
-O [guia de migração da v6](./index.md#janela-de-suporte) define o período de suporte: a v6 é a linha em desenvolvimento ativo e a v5 recebe correções de segurança e de funcionamento durante 12 meses após a publicação da versão estável 6.0. Esse período começa quando a 6.0 estável for publicada.
+O [guia de migração da v6](./index.md#janela-de-suporte) define o período de suporte: a v6 recebe funcionalidades e correções de funcionamento e segurança. A v5 recebe apenas correções de segurança e de funcionamento durante 12 meses a partir do lançamento da 6.0.0; não recebe novas funcionalidades.
 
-Use a [documentação da v5](../../../v5/pt/primeiros-passos/index.md) numa aplicação estável existente. Consulte o [guia de migração](./index.md) para preparar a atualização para a API baseada em instâncias.
+Use a [documentação da v5](../../../v5/pt/primeiros-passos/index.md) numa aplicação que ainda execute a v5. Siga o [guia de migração](./index.md) para atualizar para a linha estável 6.x.
 
 ## Reportar um problema
 

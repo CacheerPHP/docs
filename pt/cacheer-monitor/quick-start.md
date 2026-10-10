@@ -12,7 +12,7 @@ composer require cacheerphp/monitor
 
 Isto cobre todas as formas de construir um cache: os construtores nomeados, o `Cacheer::build()`, um simples `new Cacheer($store)` e os decorators `tiered()` / `resilient()`. Vistas com escopo ou com policy herdam-no, e as operações de capacidade (`increment`, `decrement`, `touch`, `tag`, `flushTag`) também reportam.
 
-> Requer **CacheerPHP 6**. Enquanto a 6.0 for uma pré-lançamento, a dependência usa `^6.0@RC`, que fixa na etiqueta `6.0.0-RC1`; veja [quando não aparece nada](#quando-não-aparece-nada).
+> Requer **CacheerPHP 6.x** e **PHP 8.3+**. Numa aplicação v4/v5 existente, siga o [guia de migração v6](../atualizacao/index.md) antes de instalar o Monitor 2.x; veja [quando não aparece nada](#quando-não-aparece-nada).
 
 ## Iniciar o Dashboard
 
@@ -143,7 +143,6 @@ em CI. As duas causas habituais:
   omissão fica no diretório temporário do sistema — logo "não reporta nada" é
   muitas vezes "o dashboard está a ler outro ficheiro".
 - **A versão do CacheerPHP.** O monitor liga-se ao tap de telemetria do
-  CacheerPHP 6, que não existe na v4/v5. Enquanto a 6.0 for uma pré-lançamento, a
-  restrição é `^6.0@RC` — um `^6.0` simples falha silenciosamente o
-  `minimum-stability: stable` e deixa instalada uma versão antiga sem tap onde
-  ligar.
+  CacheerPHP 6, que não existe na v4/v5. Verifique a versão instalada com
+  `composer show silviooosilva/cacheer-php`. O Monitor 2.x requer a linha estável
+  6.x (`^6.0`); siga o guia de migração se a aplicação ainda estiver na v5.

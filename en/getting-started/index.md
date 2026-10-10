@@ -20,14 +20,13 @@ optional pieces.
 ## Installation
 
 ```sh
-composer require silviooosilva/cacheer-php:"^6.0@RC"
+composer require silviooosilva/cacheer-php:"^6.0"
 ```
 
-Until 6.0.0 is tagged stable, the `@RC` flag lets Composer pick the release
-candidate; the same constraint moves to stable 6.0 once it ships. Without it,
-Composer installs the stable v5 line.
+The `^6.0` constraint installs stable 6.x releases and keeps updates within the
+same major version.
 
-See [version support](../updating/version-support.md) for the release status.
+See [version support](../updating/version-support.md) for the release lines and maintenance policy.
 
 
 This pulls in the PSR contracts automatically (`psr/simple-cache`, `psr/cache`,

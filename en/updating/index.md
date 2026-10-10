@@ -9,14 +9,13 @@ rename. If a service can't move yet, keep it on `^5.2`.
 ## 1. Install
 
 ```sh
-composer require silviooosilva/cacheer-php:"^6.0@RC"
+composer require silviooosilva/cacheer-php:"^6.0"
 ```
 
-Until 6.0.0 is tagged stable, the `@RC` flag lets Composer pick the release
-candidate; the same constraint moves to stable 6.0 once it ships. Without it,
-Composer installs the stable v5 line.
+The `^6.0` constraint selects stable 6.x releases and keeps updates within the
+same major version.
 
-See [version support](./version-support.md) for the release status.
+See [version support](./version-support.md) for the release lines and maintenance policy.
 
 
 v6 requires PHP 8.3+. The core installs with no backend clients; `ArrayStore` and
@@ -151,9 +150,9 @@ unless values cached before the upgrade are acceptable. Then drop the v6 keyspac
 
 ## Support window
 
-- **v6** is the actively developed line.
+- **v6** is the current stable line and receives features and fixes.
 - **v5** receives security and correctness fixes only for 12 months after the 6.0
-  stable release.
+  stable release. No new features are backported.
 
 > Upgrading from **v4**? First follow the [v5 migration guide](./v5-migration.md),
 > then this one.

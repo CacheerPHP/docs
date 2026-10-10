@@ -1,6 +1,6 @@
 # Documentação CacheerPHP (PT)
 
-**Documentação: prévia 6.x** | PHP 8.3+ | [Guia de atualização](./atualizacao/index.md)
+**Documentação: 6.x estável** | PHP 8.3+ | [Guia de atualização](./atualizacao/index.md)
 
 O CacheerPHP 6 é um cache **baseado em instâncias**: um núcleo `Cacheer` enxuto
 sobre um contrato `Store` mínimo de quatro métodos, com tudo o mais — lotes, tags,

@@ -1,6 +1,6 @@
 # CacheerPHP Docs
 
-This repository contains the documentation for CacheerPHP.
+This repository contains the documentation for the stable CacheerPHP 6.x line.
 
 Structure
 - en: English documentation

@@ -9,6 +9,8 @@ Escolha a documentação que corresponde à versão instalada na aplicação.
 | 6.x | Linha estável atual; começa na 6.0.0 | 8.3+ | `composer require silviooosilva/cacheer-php:"^6.0"` |
 | 5.x | Manutenção; a versão mais recente é a 5.2.0 | 8.2+ | `composer require silviooosilva/cacheer-php:"^5.2"` |
 
+Data de lançamento do CacheerPHP 6.0.0: **12 de outubro de 2026**.
+
 O CacheerPHP 6.0.0 é a versão estável da API baseada em instâncias documentada aqui.
 A restrição `^6.0` aceita atualizações estáveis da linha 6.x sem mudar de versão principal. Consulte as [versões no GitHub](https://github.com/CacheerPHP/CacheerPHP/releases) para notas de lançamento e registos de alterações.
 

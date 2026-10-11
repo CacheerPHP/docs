@@ -9,6 +9,8 @@ Choose the documentation that matches the version installed in your application.
 | 6.x | Current stable line; starts at 6.0.0 | 8.3+ | `composer require silviooosilva/cacheer-php:"^6.0"` |
 | 5.x | Maintenance; latest release is 5.2.0 | 8.2+ | `composer require silviooosilva/cacheer-php:"^5.2"` |
 
+Release date for CacheerPHP 6.0.0: **October 12, 2026**.
+
 CacheerPHP 6.0.0 is the stable release for the instance-first API documented here.
 The `^6.0` constraint accepts stable 6.x updates without moving to another major version. See [GitHub releases](https://github.com/CacheerPHP/CacheerPHP/releases) for release notes and changelogs.
 

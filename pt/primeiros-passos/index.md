@@ -1,175 +1,112 @@
 # Primeiros Passos
 
-O CacheerPHP 6 é um cache baseado em instâncias: um núcleo `Cacheer` enxuto sobre um
-contrato `Store` mínimo, com capacidades opcionais (lotes, tags, locks, contadores
-atômicos), decorators componíveis (camadas, resiliente, instrumentado), um pipeline
-de armazenamento autenticado e adaptadores PSR-16/PSR-6.
+**Cache para PHP independente de framework, com invalidação por escopo, stores componíveis e monitorização opcional.** Este exemplo guarda um pequeno catálogo, mostra um hit entre dois processos PHP e atualiza o resultado quando a origem muda.
 
-## Requisitos
+## 1. Instalar
 
-| Requisito | Detalhes |
-|-----------|----------|
-| **PHP** | 8.3 ou mais recente |
-| **Opcional** | `ext-openssl` (criptografia AES-256-GCM), `ext-zlib` (gzip) |
-| **Opcional** | `ext-pdo` + driver PDO para a store de banco de dados |
-| **Opcional** | `predis/predis` ou `ext-redis` para a store Redis |
-
-O núcleo instala e funciona com as stores Array e File **sem** nenhuma das partes
-opcionais.
-
-## Instalação
+Precisa de **PHP 8.3+** e Composer. A store de ficheiros não precisa de Redis, base de dados ou extensões PHP opcionais.
 
 ```sh
+mkdir cacheer-demo
+cd cacheer-demo
 composer require silviooosilva/cacheer-php:"^6.0"
 ```
 
-A restrição `^6.0` instala versões estáveis da linha 6.x e mantém as atualizações
-dentro da mesma versão principal.
+Já tem um projeto PHP? Execute apenas o comando Composer na sua raiz. A restrição `^6.0` mantém as atualizações na linha estável 6.x.
 
-Consulte o [suporte de versões](../atualizacao/suporte-de-versoes.md) para conhecer as linhas de versões e a política de manutenção.
+## 2. Adicionar uma origem e um cache
 
+Crie `products.json` na raiz do projeto:
 
-Isso já inclui os contratos PSR (`psr/simple-cache`, `psr/cache`, `psr/log`,
-`psr/event-dispatcher`).
+```json
+[
+  {"id": 1, "name": "Desk lamp"},
+  {"id": 2, "name": "Notebook"}
+]
+```
 
-## Início Rápido
+Guarde este código em `cache-demo.php`, ao lado do JSON:
 
 ```php
 <?php
-require_once __DIR__ . '/vendor/autoload.php';
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
 
 use Silviooosilva\CacheerPhp\Cacheer;
 
-// Em memória, sem dependências (ótimo para testes e execuções curtas de CLI).
-$cache = Cacheer::inMemory();
+$catalog = Cacheer::file(__DIR__ . '/var/cache')->scope('catalog');
 
-// Grave com um TTL: segundos, "10 minutes", um DateInterval ou null (para sempre).
-$cache->set('user:123', ['name' => 'John Doe'], ttl: '10 minutes');
+if (in_array('--refresh', $argv, true)) {
+    $catalog->delete('products');
+}
 
-// Leia (retorna o padrão em caso de miss).
-$user = $cache->get('user:123', default: null);
+$products = $catalog->remember('products', 300, static function (): array {
+    echo "Reading products.json...\n";
 
-// Calcule uma única vez: executa o callback no miss, guarda e retorna.
-$report = $cache->remember('report:daily', ttl: 3600, callback: fn () => build_report());
+    return json_decode(
+        file_get_contents(__DIR__ . '/products.json'),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
+});
 
-// Existência e remoção.
-$cache->has('user:123');   // true
-$cache->delete('user:123');
+echo 'Products: ' . count($products) . PHP_EOL;
 ```
 
-## Escolhendo uma store
+O callback é a origem dos dados. Na aplicação, substitua a leitura do JSON por uma consulta à base de dados ou uma chamada à API. Construa o cache uma vez no bootstrap e injete-o nos serviços que precisam dele. Mantenha `var/cache` com permissão de escrita e fora da raiz pública.
 
-Troque a store, mantenha a API. Veja [Stores e capacidades](../api/drivers.md).
+## 3. Ver um miss e um hit
 
-```php
-use Silviooosilva\CacheerPhp\Cacheer;
-
-$cache = Cacheer::inMemory();                    // store de array em memória
-$cache = Cacheer::file('/var/cache/app');        // persistente, sem dependências
-$cache = Cacheer::database($pdo, 'cacheer');     // injete seu próprio PDO
-$cache = Cacheer::redis($connection);            // adaptador predis ou phpredis
+```sh
+php cache-demo.php
+php cache-demo.php
 ```
 
-Crie o schema do banco explicitamente antes (nunca como efeito colateral):
+Primeira execução:
 
-```php
-use Silviooosilva\CacheerPhp\Stores\Support\DatabaseStoreSchema;
-
-DatabaseStoreSchema::migrate($pdo, 'cacheer');
+```text
+Reading products.json...
+Products: 2
 ```
 
-## Escopos
+Segunda execução, dentro de cinco minutos:
 
-Escopos substituem namespaces por string por keyspaces isolados que você limpa
-separadamente. Veja o [guia de Escopos](../guias/escopos.md).
-
-```php
-$cache->scope('reports')->set('daily', $rows);
-$cache->in('billing')->set('daily', $invoice);    // in() é um alias de scope()
-$cache->scope('reports')->clear();                // limpa apenas esse escopo
+```text
+Products: 2
 ```
 
-`scope()` retorna outro `Cacheer`, então um cache com escopo mantém a API inteira — e
-o escopo vale também para contadores, tags e locks, não só `get`/`set`.
+O segundo processo lê o resultado guardado sem executar o callback. A store de ficheiros persiste entre pedidos e execuções CLI. `Cacheer::inMemory()` dura apenas durante a vida do seu processo PHP.
 
-## Contadores, tags, locks, renovação de TTL
+## 4. Alterar a origem e invalidar
 
-Capacidades são implementadas pela store e chamadas no cache, então o escopo deste
-cache é aplicado para você:
+Adicione um terceiro produto ao `products.json`. Execute `php cache-demo.php`: continua a indicar dois produtos enquanto o resultado em cache for válido.
 
-```php
-$cache->increment('visits');                  // contador atômico
-$cache->decrement('stock', 5, initial: 100);
-$cache->touch('session:1', '1 hour');         // renova o TTL, preserva o valor
-$cache->tag('product:1', 'products');
-$cache->flushTag('products');
-$lock = $cache->lock('nightly-import', 300);
-
-// Backend plugável? Pergunte antes — a resposta é honesta mesmo com decorators.
-$cache->supports(\Silviooosilva\CacheerPhp\Contracts\AtomicStore::class);
+```sh
+php cache-demo.php --refresh
 ```
 
-## Verbos do dia a dia
+O comando remove apenas `products` no escopo `catalog`. O callback volta a ler o ficheiro e indica três produtos. Na aplicação, invalide a chave depois de a alteração na origem ter sucesso. `$catalog->clear()` limpa esse escopo; mantenha uma instância raiz se também precisar de limpar toda a store configurada.
 
-```php
-$cache->forever('config', $config);                     // sem expiração
-$cache->add('lock:job', 1, ttl: 60);                    // armazena só se ausente
-$cache->pull('flash');                                  // lê uma vez e remove
-$cache->missing('user:1');                              // inverso de has()
-$cache->rememberForever('version', fn () => compute());
-$cache->stats();                                        // store, escopo, capacidades
-```
+## Continuar na aplicação
 
-## Cálculo único e stale-while-revalidate
+| A sua aplicação | Próximo passo |
+| --- | --- |
+| PHP puro ou um worker | Crie o cache no bootstrap e injete `Contracts\Cache` nos serviços. O exemplo acima está pronto a executar. |
+| Laravel | [Registe o cache num service provider e injete-o num serviço de catálogo](../guias/laravel.md). |
+| Ainda está a decidir | [Compare CacheerPHP com Laravel Cache](../guias/cacheerphp-vs-laravel-cache.md). |
+| Quer ver hits e misses | [Ligue o Cacheer Monitor](../cacheer-monitor/quick-start.md). |
 
-```php
-// Executa o callback uma vez mesmo sob estampede concorrente.
-$user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
+## Escolher armazenamento quando precisar
 
-// Serve fresco por 30s, depois serve stale enquanto um worker recarrega, até 300s.
-$feed = $cache->flexible('feed', fresh: 30, stale: 300, callback: fn () => build_feed());
-```
+Comece por ficheiros num único servidor. Escolha [Redis](../api/drivers.md) ou uma [store de base de dados](../api/drivers.md) quando processos em vários servidores precisarem de partilhar o backend. Forneça a ligação; crie explicitamente o schema da store de base de dados durante a configuração. Para testes e tarefas CLI curtas, use `Cacheer::inMemory()`.
 
-Veja [Remember e locks](../guias/remember-e-locks.md) e
-[Stale-while-revalidate](../guias/stale-while-revalidate.md).
+## Algumas regras a manter
 
-## Formatos de TTL
+- `get()` devolve o valor original. `null`, `false`, `0` e arrays vazios em cache são hits válidos; use `has()` ou `entry()->isHit()` quando a presença importar.
+- O TTL aceita segundos positivos, uma string como `'5 minutes'`, `DateInterval` ou `Ttl`. TTL omitido/null usa a política predefinida, se existir; caso contrário, não expira. Use `forever()` para declarar armazenamento sem expiração.
+- `remember()` coordena misses quando a store suporta locks. A expiração da lease e timeouts podem permitir trabalho duplicado; os callbacks devem tolerá-lo.
+- `flexible()` suporta stale-while-revalidate. O executor predefinido executa inline; [configure execução diferida](../guias/stale-while-revalidate.md) antes de esperar atualizações depois da resposta.
 
-Um TTL pode ser int (segundos), string legível, `DateInterval` ou `null` (para
-sempre). Veja [TTL e Clock](../api/construtor-de-tempo.md).
-
-```php
-$cache->set('key', $data, ttl: 3600);
-$cache->set('key', $data, ttl: '2 hours');
-$cache->set('key', $data, ttl: new \DateInterval('PT30M'));
-$cache->set('key', $data, ttl: null); // para sempre
-```
-
-## Adaptadores PSR
-
-```php
-use Silviooosilva\CacheerPhp\Psr\{Psr16Cache, Psr6Pool};
-use Silviooosilva\CacheerPhp\Support\SystemClock;
-
-$psr16 = new Psr16Cache($cache);                    // Psr\SimpleCache\CacheInterface
-$pool  = new Psr6Pool($cache, new SystemClock());   // Psr\Cache\CacheItemPoolInterface
-```
-
-Veja [Adaptadores PSR-16 e PSR-6](../api/psr16-adapter.md).
-
-## Vindo da v5?
-
-A migração é quase toda mecânica — renomeie os métodos v5 para os nomes v6
-(`putCache`→`set`, `getCache`→`get`, namespace posicional → `scope()`). Os dados
-em cache começam frios: a v6 não lê entradas v5. Um
-conjunto Rector opcional automatiza as renomeações comuns; se um serviço ainda não
-puder migrar, mantenha-o em `^5.2`.
-
-Veja o [guia de atualização](../atualizacao/index.md) para o mapeamento completo.
-
-## Próximos Passos
-
-- [Guias](../guias/configuracao.md) — aprofundamentos por funcionalidade
-- [Referência da API](../api/index.md) — documentação completa dos métodos
-- [Tutoriais](../tutoriais/index.md) — exemplos objetivos
-- [Guia de atualização](../atualizacao/index.md) — atualizando da v5
+Consulte as [assinaturas da API](../api/index.md), o [suporte de versões](../atualizacao/suporte-de-versoes.md) ou o [guia de migração](../atualizacao/index.md) se estiver a atualizar da v5.

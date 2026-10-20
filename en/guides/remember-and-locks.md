@@ -26,9 +26,10 @@ built-in stores do — `remember()` is **single-flight**:
 2. One acquires a short lock and runs the callback.
 3. The others block briefly, then read the value the first worker just stored.
 
-So an expensive computation runs **once**, not once per concurrent request. If the
-lock can't be acquired within the internal window, a worker falls back to
-computing rather than blocking indefinitely — correctness over coordination.
+This coordinates concurrent misses while the lock lease holds. After a five-second
+lock timeout, a worker rechecks the entry and computes if it is still missing.
+Lease expiry can also allow another worker to compute, so callbacks must tolerate
+duplicate execution. Array-store coordination is limited to one PHP process.
 
 On a store that can't lock, `remember()` degrades to a plain compute-and-store
 (no coordination), which is still correct, just not stampede-proof. That holds

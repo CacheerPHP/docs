@@ -25,9 +25,11 @@ implementam — `remember()` é **single-flight**:
 3. Os outros bloqueiam brevemente, depois leem o valor que o primeiro acabou de
    gravar.
 
-Então um cálculo caro roda **uma vez**, não uma por requisição concorrente. Se o lock
-não puder ser adquirido na janela interna, um worker cai para calcular em vez de
-bloquear indefinidamente — correção acima de coordenação.
+Isso coordena misses concorrentes enquanto a lease do lock for válida. Depois de
+um timeout de cinco segundos, o worker verifica a entrada novamente e calcula se
+ainda não existir. A expiração da lease também pode permitir outro cálculo; os
+callbacks devem tolerar execução duplicada. A coordenação da store array limita-se
+a um processo PHP.
 
 Em uma store que não pode travar, `remember()` degrada para um compute-and-store
 simples (sem coordenação), ainda correto, só não à prova de estampede. Isso também

@@ -9,6 +9,8 @@ Structure
 English
 - [Index](en/index.md)
 - [Getting Started](en/getting-started/index.md)
+- [Laravel integration](en/guides/laravel.md)
+- [CacheerPHP vs Laravel Cache](en/guides/cacheerphp-vs-laravel-cache.md)
 - [Guides](en/guides/configuration.md)
 - [API](en/api/index.md)
 - [Tutorials](en/tutorials/index.md)
@@ -19,6 +21,8 @@ English
 Portuguese
 - [Index](pt/index.md)
 - [Primeiros Passos](pt/primeiros-passos/index.md)
+- [Integração com Laravel](pt/guias/laravel.md)
+- [CacheerPHP vs Laravel Cache](pt/guias/cacheerphp-vs-laravel-cache.md)
 - [Guias](pt/guias/configuracao.md)
 - [API](pt/api/index.md)
 - [Tutoriais](pt/tutoriais/index.md)

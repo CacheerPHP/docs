@@ -2,25 +2,17 @@
 
 **Documentação: 6.x estável** | PHP 8.3+ | [Guia de atualização](./atualizacao/index.md)
 
-O CacheerPHP 6 é um cache **baseado em instâncias**: um núcleo `Cacheer` enxuto
-sobre um contrato `Store` mínimo de quatro métodos, com tudo o mais — lotes, tags,
-locks, contadores atômicos, camadas, resiliência, criptografia — como uma
-**capacidade opcional** que você habilita. Caches nunca são globais — você
-constrói um e o injeta — e o pacote em si não executa nada no autoload; o único
-estado global do processo é o tap opcional
-[`Telemetry`](./guias/observabilidade.md#o-tap-global-de-telemetria), dormente até
-que um listener seja registrado. A v5 segue na própria linha `5.x` durante a
-migração.
+**Cache para PHP independente de framework, com invalidação por escopo, stores componíveis e monitorização opcional.** Use a mesma interface em PHP puro, Laravel ou num worker.
+
+Comece por executar um cache persistente duas vezes e invalide o resultado depois de alterar a origem. Precisa apenas de PHP 8.3+, Composer e um diretório com permissão de escrita fora da raiz pública.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cacheer::file(__DIR__ . '/cache');
-
-$cache->set('user:42', $user, ttl: '10 minutes');
-$user = $cache->get('user:42');
-
-$user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
+$catalog = Cacheer::file(__DIR__ . '/var/cache')->scope('catalog');
+$products = $catalog->remember('products', 300, static fn (): array => [
+    ['id' => 1, 'name' => 'Desk lamp'],
+]);
 ```
 
 ---
@@ -30,6 +22,8 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 | Quero… | Começar aqui |
 |---|---|
 | Instalar o CacheerPHP | [Primeiros passos](./primeiros-passos/index.md) |
+| Usar CacheerPHP no Laravel | [Integração com Laravel](./guias/laravel.md) |
+| Comparar com Laravel Cache | [Comparação e compromissos](./guias/cacheerphp-vs-laravel-cache.md) |
 | Escolher o armazenamento | [Stores e capacidades](./api/drivers.md) |
 | Guardar resultados dispendiosos | [Remember e locks](./guias/remember-e-locks.md) |
 | Gerir pedidos simultâneos | [Stale-while-revalidate](./guias/stale-while-revalidate.md) |
@@ -56,11 +50,9 @@ Para assinaturas de métodos, consulte a [referência da API](./api/index.md). P
 - **Decorators componíveis.** [Camadas](./guias/cache-em-camadas.md) (L1/L2),
   [resiliente](./guias/store-resiliente.md) (fallback com circuit breaker) e
   [instrumentado](./guias/observabilidade.md) (eventos tipados + métricas).
-- **Proteção contra estampede.** [`remember()`](./guias/remember-e-locks.md) de
-  execução única e [`flexible()`](./guias/stale-while-revalidate.md).
-- **Armazenamento autenticado.** serialize → gzip opcional → AES-256-GCM opcional
-  em um envelope versionado e à prova de adulteração, com
-  [rotação de chaves](./guias/criptografia-e-compressao.md).
+- **Proteção contra estampede.** [`remember()`](./guias/remember-e-locks.md) com
+  coordenação por locks e [`flexible()`](./guias/stale-while-revalidate.md).
+- **Armazenamento configurável.** Serialização, gzip opcional e criptografia autenticada AES-256-GCM opcional, com [rotação de chaves](./guias/criptografia-e-compressao.md). A autenticação exige criptografia.
 - **Padrões e ferramentas.** Adaptadores [PSR-16 e PSR-6](./api/psr16-adapter.md),
   log PSR-3, ponte PSR-14 e uma [CLI `cacheer`](./guias/cli.md).
 - **Migração.** Conjunto Rector opcional e uma atualização com keyspace frio — a

@@ -2,23 +2,17 @@
 
 **Documentation: 6.x stable** | PHP 8.3+ | [Migration guide](./updating/index.md)
 
-CacheerPHP 6 is an **instance-first** cache: a small `Cacheer` kernel over a minimal
-four-method `Store` contract, with everything else — batching, tags, locks, atomic
-counters, tiering, resilience, encryption — an **optional capability** you opt
-into. Caches are never global — you construct one and inject it — and the package
-itself runs nothing at autoload time; the one process-global is the opt-in
-[`Telemetry`](./guides/observability.md#the-global-telemetry-tap) tap, dormant
-until a listener is registered. v5 stays on its own `5.x` line during migration.
+**Framework-independent PHP caching with scoped invalidation, composable stores, and optional monitoring.** Use the same cache interface in vanilla PHP, Laravel, or a worker.
+
+Start by running a persistent cache twice, then invalidate a result after changing its source. You only need PHP 8.3+, Composer, and a writable directory outside your public web root.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;
 
-$cache = Cacheer::file(__DIR__ . '/cache');
-
-$cache->set('user:42', $user, ttl: '10 minutes');
-$user = $cache->get('user:42');
-
-$user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
+$catalog = Cacheer::file(__DIR__ . '/var/cache')->scope('catalog');
+$products = $catalog->remember('products', 300, static fn (): array => [
+    ['id' => 1, 'name' => 'Desk lamp'],
+]);
 ```
 
 ---
@@ -28,6 +22,8 @@ $user = $cache->remember('user:42', '10 minutes', fn () => $users->find(42));
 | I want to… | Start here |
 |---|---|
 | Install CacheerPHP | [Getting started](./getting-started/index.md) |
+| Use CacheerPHP in Laravel | [Laravel integration](./guides/laravel.md) |
+| Compare with Laravel Cache | [Comparison and trade-offs](./guides/cacheerphp-vs-laravel-cache.md) |
 | Choose storage | [Stores and capabilities](./api/drivers.md) |
 | Cache expensive results | [Remember and locks](./guides/remember-and-locks.md) |
 | Handle concurrent requests | [Stale-while-revalidate](./guides/stale-while-revalidate.md) |
@@ -55,10 +51,9 @@ For method signatures, use the [API reference](./api/index.md). For runnable exa
 - **Composable decorators.** [Tiered](./guides/tiered-caching.md) (L1/L2),
   [resilient](./guides/resilient-store.md) (circuit-breaker fallback), and
   [instrumented](./guides/observability.md) (typed events + metrics) wrap any store.
-- **Stampede protection.** Single-flight [`remember()`](./guides/remember-and-locks.md)
+- **Stampede protection.** Lock-coordinated [`remember()`](./guides/remember-and-locks.md)
   and stale-while-revalidate [`flexible()`](./guides/stale-while-revalidate.md).
-- **Authenticated storage.** serialize → optional gzip → optional AES-256-GCM into
-  a versioned, tamper-evident envelope, with [key rotation](./guides/encryption-and-compression.md).
+- **Configurable storage.** Serialization, optional gzip, and optional authenticated AES-256-GCM encryption with [key rotation](./guides/encryption-and-compression.md). Authentication requires encryption.
 - **Standards & tooling.** [PSR-16 and PSR-6](./api/psr16-adapter.md) adapters,
   PSR-3 logging, a PSR-14 bridge, and a [`cacheer` CLI](./guides/cli.md).
 - **Migration.** An optional Rector rename set and a cold-keyspace upgrade — the

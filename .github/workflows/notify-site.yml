@@ -2,7 +2,8 @@ name: Notify Site on Docs Update
 
 on:
   push:
-    branches: [main]
+    branches: [6.x]
+  workflow_dispatch:
 
 jobs:
   notify:

@@ -38,18 +38,35 @@ No `.env`:
 CACHE_STORE=cacheer
 ```
 
+Execute `php artisan config:clear` depois da alteração. Nos deployments que
+guardam a configuração em cache, volte a gerá-la com `php artisan config:cache`.
+
 Tudo o que usa a store de cache predefinida passa a correr sobre o CacheerPHP: `Cache::`, `cache()`, locks, jobs únicos, o scheduler e os rate limiters. Para a usar apenas em algumas chamadas, mantenha a predefinição e chame `Cache::store('cacheer')`.
 
 ## 4. Criar as tabelas (apenas backend de base de dados)
 
-Ignore este passo, a menos que uma store `cacheer` use `'backend' => 'database'`, como store principal ou como fallback. Publique a migration e execute-a:
+Ignore este passo, a menos que uma store `cacheer` use `'backend' => 'database'`, como store principal ou como fallback. Publique a migration:
 
 ```sh
 php artisan vendor:publish --tag=cacheer-migrations
-php artisan migrate
 ```
 
-A migration cria as tabelas de todas as stores `cacheer` configuradas com o backend de base de dados, na ligação de cada store.
+Antes de a executar, edite a lista `$tables` da migration publicada para
+corresponder aos seus backends de base de dados, incluindo os fallbacks. O valor
+predefinido é `[[null, 'cacheer_store']]`, na ligação de base de dados predefinida
+do Laravel. Por exemplo:
+
+```php
+private array $tables = [
+    ['mysql', 'cacheer_store'],
+    ['mysql', 'cacheer_fallback'],
+];
+```
+
+Inclua cada par de ligação/tabela uma só vez e execute `php artisan migrate`.
+Mantenha a lista fixa depois disso, para que o rollback reverta a migration
+original mesmo que `config/cache.php` mude. Use uma nova migration ao adicionar
+outro backend de base de dados.
 
 ## 5. Confirmar que funciona
 
@@ -64,6 +81,8 @@ Cache::getStore()::class;     // "Cacheer\Laravel\CacheerStore"
 ```
 
 Para acompanhar o tráfego, instale o [Cacheer Monitor](../cacheer-monitor/quick-start.md); todas as stores `cacheer` reportam para ele sem mais configuração.
+Os eventos de failover requerem CacheerPHP 6.1 e uma versão compatível do Monitor.
+Os eventos normais de cache também funcionam com CacheerPHP 6.0.
 
 ## Voltar atrás
 

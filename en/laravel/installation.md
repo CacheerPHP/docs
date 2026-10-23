@@ -38,18 +38,34 @@ In `.env`:
 CACHE_STORE=cacheer
 ```
 
+Run `php artisan config:clear` after changing it. On deployments that cache
+configuration, rebuild it with `php artisan config:cache`.
+
 Everything that uses the default cache store now runs on CacheerPHP: `Cache::`, `cache()`, locks, unique jobs, the scheduler, and rate limiters. To use it for some calls only, leave the default as it is and call `Cache::store('cacheer')`.
 
 ## 4. Create the tables (database backend only)
 
-Skip this step unless a `cacheer` store uses `'backend' => 'database'`, as its primary store or its fallback. Publish the migration and run it:
+Skip this step unless a `cacheer` store uses `'backend' => 'database'`, as its primary store or its fallback. Publish the migration:
 
 ```sh
 php artisan vendor:publish --tag=cacheer-migrations
-php artisan migrate
 ```
 
-The migration creates the tables of every `cacheer` store configured with the database backend, on that store's connection.
+Before running it, edit the published migration's `$tables` list to match your
+database backends, including fallbacks. Its default is `[[null, 'cacheer_store']]`
+on Laravel's default database connection. For example:
+
+```php
+private array $tables = [
+    ['mysql', 'cacheer_store'],
+    ['mysql', 'cacheer_fallback'],
+];
+```
+
+List each connection/table pair once, then run `php artisan migrate`. Keep this
+list fixed afterward so rollback reverses the original migration even when
+`config/cache.php` changes. Use a new migration when adding another database
+backend.
 
 ## 5. Check that it works
 
@@ -64,6 +80,8 @@ Cache::getStore()::class;     // "Cacheer\Laravel\CacheerStore"
 ```
 
 To watch the traffic, install [Cacheer Monitor](../cacheer-monitor/quick-start.md); every `cacheer` store reports to it with no further setup.
+Failover events require CacheerPHP 6.1 and a compatible Monitor version. Ordinary
+cache events also work with CacheerPHP 6.0.
 
 ## Switch back
 

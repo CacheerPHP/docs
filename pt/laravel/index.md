@@ -29,3 +29,4 @@ A exceção é `Cache::tags()`; consulte [diferenças e limitações](./limitati
 - [Configuração](./configuration.md): backends, failover, cache em camadas, criptografia e prefixos.
 - [Funcionalidades do Laravel](./framework-features.md): locks, filas, scheduler, rate limits e testes.
 - [Diferenças e limitações](./limitations.md): o que se comporta de forma diferente das stores nativas do Laravel e a atualização a partir do pacote 0.1.
+- [Contribuir](../contribuicao/laravel.md): preparação, verificações do pacote e testes de integração Redis.

@@ -53,12 +53,12 @@ use Silviooosilva\CacheerPhp\Support\SystemClock;
 
 $pool = new Psr6Pool(Cacheer::file('/var/cache/app'), new SystemClock());
 
-$item = $pool->getItem('user:42');
+$item = $pool->getItem('user42');
 if (! $item->isHit()) {
     $item->set($user)->expiresAfter(600); // seconds or a DateInterval
     $pool->save($item);
 }
-$user = $pool->getItem('user:42')->get();
+$user = $pool->getItem('user42')->get();
 
 // Deferred saves are flushed on commit().
 $pool->saveDeferred($pool->getItem('a')->set(1));

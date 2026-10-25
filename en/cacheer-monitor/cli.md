@@ -10,10 +10,12 @@ Starts the HTTP API and SPA assets using PHP's built-in server.
 |---|---|---|
 | `--host` | `127.0.0.1` | Bind address |
 | `--port` | `9966` | Listen port |
+| `--events` | Auto-resolved | Path to the JSONL events file. |
+| `--workers` | `4` | Server worker processes on Unix; SSE holds a worker for the stream lifetime. Ignored on Windows. |
 | `--quiet` | — | Suppress request logging |
 
 ```bash
-php bin/cacheer-monitor serve --host=0.0.0.0 --port=9000 --quiet
+vendor/bin/cacheer-monitor serve --host=127.0.0.1 --port=9966 --events=/absolute/path/to/events.jsonl --workers=4 --quiet
 ```
 
 ## `doctor`
@@ -38,12 +40,11 @@ writable. Exits non-zero when a check fails, so it works in CI.
 The bridge runs at autoload in every request and so can never warn or throw —
 this command is where its silence gets explained.
 
-## Scripts & Reporters
+## `help`
 
-Run bundled demos to exercise Cacheer adapters and produce realistic traffic.
+```sh
+vendor/bin/cacheer-monitor help
+```
 
-| Command | Description |
-|---|---|
-| `php Tests/scenarios.php` | Baseline traffic mix |
-| `php Tests/scenarios_advanced.php` | Bursty load, tag flushing, error events |
-| `php Tests/metrics_test.php` | Quick regression check for metrics aggregation |
+For package development and regression checks, see
+[Contributing to Monitor](../contributing/cacheer-monitor.md).

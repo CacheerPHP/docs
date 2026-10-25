@@ -41,6 +41,9 @@ CACHE_STORE=cacheer
 Run `php artisan config:clear` after changing it. On deployments that cache
 configuration, rebuild it with `php artisan config:cache`.
 
+An existing `CACHE_STORE=database` takes precedence over the fallback value in
+`env('CACHE_STORE', 'cacheer')`; change the environment value explicitly.
+
 Everything that uses the default cache store now runs on CacheerPHP: `Cache::`, `cache()`, locks, unique jobs, the scheduler, and rate limiters. To use it for some calls only, leave the default as it is and call `Cache::store('cacheer')`.
 
 ## 4. Create the tables (database backend only)

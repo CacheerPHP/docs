@@ -29,3 +29,4 @@ You can combine both: the driver also binds CacheerPHP's `Cache` contract, so se
 - [Configuration](./configuration.md): backends, failover, tiered caching, encryption, and prefixes.
 - [Laravel features](./framework-features.md): locks, queues, the scheduler, rate limits, and testing.
 - [Differences and limitations](./limitations.md): what behaves differently from Laravel's built-in stores, and upgrading from the 0.1 package.
+- [Contributing](../contributing/laravel.md): development setup, package checks, and Redis integration tests.

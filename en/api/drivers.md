@@ -39,6 +39,9 @@ interface Store
 
 ## Built-in stores
 
+The repository's [capability matrix](https://github.com/CacheerPHP/CacheerPHP/blob/6.x/CAPABILITIES.md)
+also records backend guarantees and failure modes.
+
 All four built-in stores implement **every** capability above. What differs is the
 *guarantee* behind a capability, especially atomicity and locking.
 

@@ -40,9 +40,10 @@ O refresh roda pelo **executor deferido** injetado:
 
 - `SyncDeferredExecutor` (padrão) roda o refresh **inline**, logo após o valor stale
   ser retornado — simples, mas a requisição atual paga por ele.
-- `AfterResponseDeferredExecutor` enfileira o refresh e o descarrega após a resposta
-  ser enviada (no shutdown / `fastcgi_finish_request`), então o usuário não espera nem
-  pela leitura stale nem pelo refresh.
+- `AfterResponseDeferredExecutor` enfileira o refresh, usa
+  `fastcgi_finish_request()` quando disponível para enviar a resposta primeiro
+  e executa as tarefas no shutdown. Sem esse suporte do runtime, o shutdown
+  não garante que a resposta já tenha chegado ao cliente.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;

@@ -41,6 +41,9 @@ CACHE_STORE=cacheer
 Execute `php artisan config:clear` depois da alteração. Nos deployments que
 guardam a configuração em cache, volte a gerá-la com `php artisan config:cache`.
 
+Um `CACHE_STORE=database` existente prevalece sobre o valor de recurso em
+`env('CACHE_STORE', 'cacheer')`; altere a variável de ambiente explicitamente.
+
 Tudo o que usa a store de cache predefinida passa a correr sobre o CacheerPHP: `Cache::`, `cache()`, locks, jobs únicos, o scheduler e os rate limiters. Para a usar apenas em algumas chamadas, mantenha a predefinição e chame `Cache::store('cacheer')`.
 
 ## 4. Criar as tabelas (apenas backend de base de dados)

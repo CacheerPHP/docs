@@ -41,8 +41,9 @@ The refresh runs through the injected **deferred executor**:
 - `SyncDeferredExecutor` (default) runs the refresh **inline**, right after the
   stale value is returned — simple, but the current request pays for it.
 - `AfterResponseDeferredExecutor` queues the refresh and flushes it after the
-  response is sent (on shutdown / `fastcgi_finish_request`), so the user waits for
-  neither the stale read nor the refresh.
+  response using `fastcgi_finish_request()` where available, and flushes at
+  shutdown. Without that runtime support, shutdown does not guarantee that the
+  response has already reached the client.
 
 ```php
 use Silviooosilva\CacheerPhp\Cacheer;

@@ -12,6 +12,11 @@ composer require cacheerphp/monitor
 
 Isto cobre todas as formas de construir um cache: os construtores nomeados, o `Cacheer::build()`, um simples `new Cacheer($store)` e os decorators `tiered()` / `resilient()`. Vistas com escopo ou com policy herdam-no, e as operações de capacidade (`increment`, `decrement`, `touch`, `tag`, `flushTag`) também reportam.
 
+O Composer carrega `src/Boot/bootstrap.php` do Monitor, que regista o listener
+com `Telemetry::listen()`. Construa caches como `Cacheer::file()` depois desse
+registo. O listener traduz eventos tipados em registos JSONL; a API local lê
+esse ficheiro sem um serviço externo de telemetria.
+
 > Requer **CacheerPHP 6.x** e **PHP 8.3+**. Numa aplicação v4/v5 existente, siga o [guia de migração v6](../atualizacao/index.md) antes de instalar o Monitor 2.x; veja [quando não aparece nada](#quando-não-aparece-nada).
 
 ## Iniciar o Dashboard

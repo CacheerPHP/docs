@@ -1,8 +1,9 @@
 # Encryption & compression
 
 Persistent stores encode every value through a pipeline —
-**serialize → compress → encrypt** — and store the result in a versioned,
-authenticated envelope. You describe the pipeline with an immutable
+**serialize → compress → encrypt** — and store the result in a versioned
+envelope. Authentication applies when encryption is enabled; an unencrypted
+envelope is not authenticated. You describe the pipeline with an immutable
 [`PipelineConfig`](../api/config.md) and pass it to the store.
 
 ```php
@@ -20,6 +21,7 @@ $cache = Cacheer::file('/var/cache/app', $pipeline);
 ## Compression
 
 Gzip is optional and most useful for large payloads (big arrays, HTML fragments).
+It requires `ext-zlib`.
 Decompression is **bounded** by `withMaxValueBytes()`, so a crafted blob cannot
 force unbounded memory use.
 

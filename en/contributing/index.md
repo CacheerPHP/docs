@@ -4,6 +4,9 @@ Thanks for helping improve CacheerPHP. This page covers the v6 development
 workflow. For the full policy, see `CONTRIBUTING.md`, `SECURITY.md`, and the
 `ROADMAP.md` in the package repository.
 
+For the other packages, see [contributing to Monitor](cacheer-monitor.md) and
+[contributing to the Laravel driver](laravel.md).
+
 ## Setup
 
 ```sh
@@ -27,6 +30,12 @@ composer test:storage    # the storage pipeline / envelope
 composer test:integration  # Redis / database (needs services)
 composer test:all        # everything
 ```
+
+Use `composer test:parallel` to check worker isolation. The integration suites
+can also run separately with `composer test:integration:redis` and
+`composer test:integration:database`. Missing services skip locally;
+`CACHEER_REQUIRE_REDIS=1` and `CACHEER_REQUIRE_DATABASE=1` make selected service
+checks required. Always use dedicated test keyspaces.
 
 Data providers must use the attribute form, not the annotation:
 
@@ -71,3 +80,11 @@ data outside its configured keyspace.
 - **Bugs / features:** use the issue templates in the repository.
 - **Security:** do not open a public issue — follow `SECURITY.md`.
 - **Substantial changes:** open an RFC first so the design is agreed before code.
+
+## Repository references
+
+- [Contribution policy](https://github.com/CacheerPHP/CacheerPHP/blob/6.x/CONTRIBUTING.md)
+- [Security policy](https://github.com/CacheerPHP/CacheerPHP/blob/6.x/SECURITY.md)
+- [Known limitations](https://github.com/CacheerPHP/CacheerPHP/blob/6.x/KNOWN_LIMITATIONS.md)
+- [Roadmap](https://github.com/CacheerPHP/CacheerPHP/blob/6.x/ROADMAP.md)
+- [Runnable examples](https://github.com/CacheerPHP/CacheerPHP/tree/6.x/Examples)

@@ -44,8 +44,11 @@ For an entry that never expires:
 
 ```php
 $config = $cache->rememberForever('app:config', fn () => load_config());
-$config = $cache->remember('app:config', null, fn () => load_config()); // same thing
 ```
+
+An omitted/null TTL in `remember()` uses the bound default policy, or forever
+when no default is configured. `rememberForever()` states no expiry explicitly
+even when a policy supplies a default TTL.
 
 ## Using locks directly
 

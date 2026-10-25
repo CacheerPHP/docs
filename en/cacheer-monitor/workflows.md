@@ -57,7 +57,7 @@ The Key Inspector shows recorded hits, misses, writes, hit rate, lifecycle count
 2. Review its lifecycle counts and event timeline for the selected driver and namespace metadata.
 3. To request a live value lookup, use the inspector refresh icon (**Refresh live value**). This requires `CACHEER_MONITOR_CAPTURE_VALUES=true`; a live preview is only available when the store can be resolved by the monitor process.
 
-The current v6 events do not report TTL or namespace metadata. **Not reported** describes missing metadata, not an entry that never expires.
+CacheerPHP 6.1+ reports TTL and namespace metadata; 6.0 does not. **Not reported** describes missing metadata, not an entry that never expires.
 
 ## Export Event History
 
@@ -88,7 +88,7 @@ curl -X POST http://127.0.0.1:9966/api/events/cleanup-rotated \
 
 ## Configure Dashboard Health Rules
 
-1. Open **Health rules** below **Cache lifecycle**.
+1. Open **Health rules**.
 2. Keep **Low hit-rate warning** enabled and choose **Alert below** on the efficiency card, or enable **Error-count warning** and **p95 latency warning** with their thresholds.
 3. Set **Minimum samples**, **Condition holds for**, and **Snooze / repeat cooldown**. See [Configuration](configuration.md) for defaults and the sample count used by each rule.
 4. Leave the dashboard open. Conditions are evaluated on successful refreshes for the current time range and namespace.
@@ -98,7 +98,7 @@ Settings persist in this browser. Warnings remain visible until recovery or snoo
 
 ## Compare Namespaces
 
-Use the namespace filter when events explicitly report that field. Pair it with the driver chart and summary cards to compare recorded traffic. The current v6 bridge does not provide namespace metadata, so the filter is marked unavailable when the displayed records lack it. A `(default)` filter matches explicitly unscoped records, not records with missing metadata.
+Use the namespace filter when events explicitly report that field. Pair it with the driver chart and summary cards to compare recorded traffic. The CacheerPHP 6.0 bridge does not provide namespace metadata, so the filter is marked unavailable when the displayed records lack it. A `(default)` filter matches explicitly unscoped records, not records with missing metadata.
 
 ## Automate Reporting
 
@@ -110,3 +110,52 @@ NOW=$(date +%s)
 HOUR_AGO=$((NOW - 3600))
 curl "http://127.0.0.1:9966/api/metrics?limit=0&from=$HOUR_AGO&until=$NOW"
 ```
+
+## Compare key patterns
+
+Open **Key patterns** to group keys whose identifiers differ, such as
+`user:123` and `user:456` becoming `user:{id}`. Shapes include `{id}`, `{uuid}`,
+`{ulid}`, `{date}`, `{email}`, and `{hash}`, grouped per driver and namespace.
+Rank by lowest hit rate (only patterns with at least 20 lookups), time saved,
+wasted writes, misses, lookups, or p95 operation latency. Use key search to narrow
+the rankings.
+
+## Investigate failover
+
+The **Failover** panel needs CacheerPHP 6.1 and a resilient cache. Failover state
+lives in each PHP process, and a short-lived PHP-FPM request usually serves from
+the fallback without ever opening its circuit, so outage windows are built from
+fallback activity: activity more than a minute apart starts a new window. A
+window shows "Recovery recorded" once a circuit close or a reconciliation follows
+it; otherwise "No recovery recorded yet", which does not mean the outage is still
+going on.
+
+## Estimate time saved
+
+**Time saved** is an estimate. CacheerPHP 6.1 reports how long each loader ran
+for a `remember()` or `flexible()` miss. For each key pattern, Monitor multiplies
+its hits by the average loader time minus the average hit time, assuming each hit
+would otherwise have run the loader once. Patterns cached with `set()` have no
+loader timings, so their savings are shown as unknown rather than zero, and they
+are left out of the total.
+
+## Find wasted writes
+
+**Wasted writes** are value writes (`put`, forever writes, batch writes, `add`)
+that ended before any hit read them: written again, deleted, or expired. A write
+counts as expired only when its TTL was reported and ran out before the end of the
+current log. A write that may still be live, or whose TTL is unknown, has no known
+outcome and is not counted either way; store-wide clears are not attributed to
+individual writes. Counters, renews, and tags are not value writes.
+
+## Investigate stampedes
+
+A **stampede** is 3 or more misses on one key within 2 seconds, from 2 or more
+processes. With CacheerPHP 6.1, Monitor also counts the loader runs in the burst,
+which is the work done more than once. A store with locking prevents most
+stampedes through `remember()`'s single-flight, so seeing them usually points at a
+store that cannot lock, or at loaders slower than the lock wait.
+
+`ArrayStore` lives in one process, so its writes and misses are judged per
+process: another process writing or missing the same key never touched this
+process's copy.

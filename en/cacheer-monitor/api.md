@@ -103,8 +103,8 @@ curl "http://127.0.0.1:9966/api/snapshot?limit=50&key_filter=users&from=17143100
 
 | Response field | Contents |
 |---|---|
-| `metrics` | Aggregate fields described under `/api/metrics`, including lifecycle counts and diagnostic rankings. |
-| `events` | Latest matching feed records, in file order (oldest first). The UI reverses them for display. |
+| `metrics` | Aggregate fields described under `/api/metrics`, including `lifecycle`, `problem_keys`, `key_patterns`, `failover`, `computed`, `time_saved`, `wasted_writes`, `stampedes`, and metadata/sample counts. |
+| `events` | Newest matching feed records by timestamp, returned oldest first. File order breaks ties; the UI reverses them for display. |
 | `coverage.source` | `current_log`; rotated files are excluded. |
 | `coverage.matching_events` | Number of records used for metrics after namespace/time filtering. |
 | `coverage.matching_feed_events` | Number remaining after key/type filtering, before the feed limit. |
@@ -185,7 +185,7 @@ Example for `key=users:42&driver=FileStore&namespace_missing=1&limit=1` (selecte
 }
 ```
 
-`last_ttl_known` distinguishes unavailable TTL from an explicitly reported forever value (`last_ttl: null` with `last_ttl_known: true`). Current v6 events do not provide TTL or namespace fields. The summary also includes errors, latency statistics, value metadata, and optional preview information.
+`last_ttl_known` distinguishes unavailable TTL from an explicitly reported forever value (`last_ttl: null` with `last_ttl_known: true`). CacheerPHP 6.1+ provides TTL and namespace fields; 6.0 does not. The summary also includes errors, latency statistics, value metadata, and optional preview information.
 
 ---
 
@@ -259,3 +259,12 @@ data: {"ts":1714310563}
 The connection lasts for `CACHEER_MONITOR_STREAM_TIMEOUT` seconds (default `30`). `EventSource` reconnects automatically after timeout or network failure. The dashboard fetches a snapshot on connection and coalesces event bursts into refreshes; heartbeat pings do not trigger one. Rotation/truncation restarts reading from the new file, and incomplete lines wait for completion.
 
 Interval polling remains available at the selected refresh rate. **Manual** stops polling but does not disable SSE updates. Browser health rules are evaluated after successful snapshot refreshes; `/api/health` remains a server liveness probe and does not report rule results.
+
+## Archive safety
+
+Clearing and automatic rotation share the reporter's file lock. Repeated rotations
+retain separate archives even within one second. Cleanup removes only old,
+timestamped `.rotated` and `.bak` archives belonging to the configured events
+file, preserving unrelated backups, recent files, directories, and symbolic links.
+The dashboard saves the supplied monitor token and prompts when authentication
+is needed for clear or cleanup; both actions use that token.

@@ -10,10 +10,12 @@ Inicia a API HTTP e os assets da SPA usando o servidor embutido do PHP.
 |---|---|---|
 | `--host` | `127.0.0.1` | Endereço de bind |
 | `--port` | `9966` | Porta de escuta |
+| `--events` | Resolvido automaticamente | Caminho do ficheiro JSONL de eventos. |
+| `--workers` | `4` | Workers do servidor em Unix; SSE ocupa um worker durante a ligação. Ignorado em Windows. |
 | `--quiet` | — | Suprime o log de pedidos |
 
 ```bash
-php bin/cacheer-monitor serve --host=0.0.0.0 --port=9000 --quiet
+vendor/bin/cacheer-monitor serve --host=127.0.0.1 --port=9966 --events=/absolute/path/to/events.jsonl --workers=4 --quiet
 ```
 
 ## `doctor`
@@ -40,12 +42,11 @@ falha, por isso funciona em CI.
 A ponte corre no autoload em cada pedido e por isso nunca pode avisar nem lançar
 exceções — este comando é onde o seu silêncio é explicado.
 
-## Scripts & Reporters
+## `help`
 
-Execute as demos incluídas para exercitar os adaptadores do Cacheer e gerar tráfego realista.
+```sh
+vendor/bin/cacheer-monitor help
+```
 
-| Comando | Descrição |
-|---|---|
-| `php Tests/scenarios.php` | Mistura de tráfego base |
-| `php Tests/scenarios_advanced.php` | Carga em rajadas, flush por tags, eventos de erro |
-| `php Tests/metrics_test.php` | Verificação rápida de regressão da agregação de métricas |
+Para desenvolvimento e verificações de regressão, consulte
+[Contribuir para o Monitor](../contribuicao/cacheer-monitor.md).

@@ -103,8 +103,8 @@ curl "http://127.0.0.1:9966/api/snapshot?limit=50&key_filter=users&from=17143100
 
 | Campo da resposta | Conteúdo |
 |---|---|
-| `metrics` | Campos agregados descritos em `/api/metrics`, incluindo contagens do ciclo de vida e rankings de diagnóstico. |
-| `events` | Registos correspondentes mais recentes, na ordem do ficheiro (mais antigos primeiro). A UI inverte-os para apresentação. |
+| `metrics` | Campos agregados de `/api/metrics`, incluindo `lifecycle`, `problem_keys`, `key_patterns`, `failover`, `computed`, `time_saved`, `wasted_writes`, `stampedes` e contagens de metadados/amostras. |
+| `events` | Registos correspondentes mais recentes por timestamp, devolvidos dos mais antigos para os mais recentes. A ordem do ficheiro desempata timestamps iguais; a UI inverte-os. |
 | `coverage.source` | `current_log`; os ficheiros arquivados são excluídos. |
 | `coverage.matching_events` | Número de registos usados nas métricas após filtrar por namespace/tempo. |
 | `coverage.matching_feed_events` | Número restante após filtrar por chave/tipo, antes do limite do fluxo. |
@@ -185,7 +185,7 @@ Exemplo para `key=users:42&driver=FileStore&namespace_missing=1&limit=1` (campos
 }
 ```
 
-`last_ttl_known` distingue TTL indisponível de duração ilimitada explicitamente reportada (`last_ttl: null` com `last_ttl_known: true`). Os eventos atuais da v6 não fornecem campos de TTL ou namespace. O resumo também inclui erros, estatísticas de latência, metadados do valor e informação de pré-visualização opcional.
+`last_ttl_known` distingue TTL indisponível de duração ilimitada explicitamente reportada (`last_ttl: null` com `last_ttl_known: true`). O CacheerPHP 6.1+ fornece campos de TTL e namespace; a versão 6.0 não. O resumo também inclui erros, estatísticas de latência, metadados do valor e informação de pré-visualização opcional.
 
 ---
 
@@ -259,3 +259,14 @@ data: {"ts":1714310563}
 A ligação dura `CACHEER_MONITOR_STREAM_TIMEOUT` segundos (padrão `30`). O `EventSource` volta a ligar automaticamente após timeout ou falha de rede. O dashboard obtém um snapshot ao ligar e agrupa rajadas de eventos em atualizações; os pings de heartbeat não pedem uma. A rotação/truncagem reinicia a leitura no novo ficheiro, e linhas incompletas aguardam conclusão.
 
 O polling periódico continua disponível no intervalo selecionado. **Manual** para o polling, mas não desativa as atualizações SSE. As regras de saúde do navegador são avaliadas após atualizações bem-sucedidas do snapshot; `/api/health` continua a verificar a disponibilidade do servidor e não reporta os resultados das regras.
+
+## Segurança dos arquivos
+
+A limpeza e a rotação automática partilham o lock do reporter. Rotações repetidas
+no mesmo segundo mantêm arquivos separados. A eliminação de arquivos remove
+apenas os `.rotated` e `.bak` antigos com timestamp que pertencem ao ficheiro
+de eventos configurado; preserva backups não relacionados, ficheiros recentes,
+diretórios e links simbólicos.
+
+O dashboard guarda o token fornecido e pede autenticação quando é necessária
+para limpar eventos ou arquivos; ambas as ações usam esse token.

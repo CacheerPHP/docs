@@ -87,9 +87,15 @@ Telemetry::captureValues(true);                                 // off by defaul
 Telemetry::reset();                                             // opt back out
 ```
 
-Once a listener is registered, every cache built through a named constructor
-(`Cacheer::file()`, `::redis()`, …) is transparently instrumented. Caches you
-construct directly with `new Cacheer($store)` are never touched by it.
+Register listeners before constructing the caches you want to observe. Named
+constructors, `Cacheer::build()`, a plain `new Cacheer($store)`, and the tiered
+and resilient constructors are instrumented; scoped and policy-bound views
+inherit that instrumentation. An explicit dispatcher or an already instrumented
+store opts out of automatic wrapping.
+
+`Telemetry::reset()` clears registrations for future caches. Existing
+instrumented caches retain their dispatcher; resetting the tap does not remove
+their instrumentation.
 
 ### The autoload-time side effect
 

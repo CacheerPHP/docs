@@ -94,7 +94,7 @@ This deletes only `products` in the `catalog` scope, so the callback reads the u
 | Your application | Next step |
 | --- | --- |
 | Vanilla PHP or a worker | Create the cache in bootstrap and inject `Contracts\Cache` into your services. The example above is ready to run. |
-| Laravel | [Bind the cache in a service provider and inject it into a catalog service](../guides/laravel.md). |
+| Laravel | [Run `Cache::` on CacheerPHP with the cacheer driver](../laravel/index.md), or [bind the cache in a service provider and inject it into a catalog service](../guides/laravel.md). |
 | Still deciding | [Compare CacheerPHP with Laravel Cache](../guides/cacheerphp-vs-laravel-cache.md). |
 | Want to inspect hits and misses | [Connect Cacheer Monitor](../cacheer-monitor/quick-start.md). |
 

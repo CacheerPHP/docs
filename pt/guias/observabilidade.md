@@ -86,10 +86,15 @@ Telemetry::captureValues(true);                                 // desligado por
 Telemetry::reset();                                             // desabilita
 ```
 
-Uma vez que haja um listener registrado, todo cache construído por um construtor
-nomeado (`Cacheer::file()`, `::redis()`, …) é instrumentado de forma transparente.
-Caches que você constrói diretamente com `new Cacheer($store)` nunca são tocados
-por ela.
+Registe os listeners antes de construir os caches que quer observar. Os
+construtores nomeados, `Cacheer::build()`, um simples `new Cacheer($store)` e os
+construtores de caches em camadas e resilientes são instrumentados; as vistas
+com escopo e política herdam essa instrumentação. Um dispatcher explícito ou
+uma store já instrumentada evita uma nova camada automática.
+
+`Telemetry::reset()` limpa os registos para caches futuros. Os caches já
+instrumentados mantêm o seu dispatcher; reiniciar o tap não remove a
+instrumentação existente.
 
 ### O efeito colateral no autoload
 

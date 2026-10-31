@@ -9,6 +9,7 @@ Structure
 English
 - [Index](en/index.md)
 - [Getting Started](en/getting-started/index.md)
+- [CacheerPHP for Laravel](en/laravel/index.md)
 - [Laravel integration](en/guides/laravel.md)
 - [CacheerPHP vs Laravel Cache](en/guides/cacheerphp-vs-laravel-cache.md)
 - [Guides](en/guides/configuration.md)
@@ -21,6 +22,7 @@ English
 Portuguese
 - [Index](pt/index.md)
 - [Primeiros Passos](pt/primeiros-passos/index.md)
+- [CacheerPHP para Laravel](pt/laravel/index.md)
 - [Integração com Laravel](pt/guias/laravel.md)
 - [CacheerPHP vs Laravel Cache](pt/guias/cacheerphp-vs-laravel-cache.md)
 - [Guias](pt/guias/configuracao.md)
@@ -32,5 +34,5 @@ Portuguese
 
 Contributing
 - Keep links relative within the same language when possible
-- Prefer adding new pages under the correct section (getting-started, guides, api, tutorials)
+- Prefer adding new pages under the correct section (getting-started, guides, api, tutorials, laravel)
 - If adding Portuguese content without a translation, link to EN as a fallback from PT (and vice-versa)

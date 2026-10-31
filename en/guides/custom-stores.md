@@ -137,5 +137,6 @@ the suite comes from `FakeClock`, so your store must take its clock (a
 A community adapter is listed as compatible when it passes the conformance suite in
 CI on supported PHP versions, documents which capabilities it provides and their
 guarantees, and documents its failure modes (connection loss, timeouts). See the
-`WRITING_A_STORE.md` guide and the driver-proposal issue template in the package
+[store-author guide](https://github.com/CacheerPHP/CacheerPHP/blob/6.x/WRITING_A_STORE.md)
+and the driver-proposal issue template in the package
 repository.

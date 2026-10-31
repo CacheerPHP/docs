@@ -44,8 +44,11 @@ Para uma entrada que nunca expira:
 
 ```php
 $config = $cache->rememberForever('app:config', fn () => load_config());
-$config = $cache->remember('app:config', null, fn () => load_config()); // o mesmo
 ```
+
+Um TTL omitido ou `null` em `remember()` usa a política predefinida, ou duração
+ilimitada se não houver um TTL predefinido. `rememberForever()` indica duração
+ilimitada explicitamente, mesmo quando a política define um TTL.
 
 ## Usando locks diretamente
 

@@ -22,7 +22,8 @@ $products = $catalog->remember('products', 300, static fn (): array => [
 | Quero… | Começar aqui |
 |---|---|
 | Instalar o CacheerPHP | [Primeiros passos](./primeiros-passos/index.md) |
-| Usar CacheerPHP no Laravel | [Integração com Laravel](./guias/laravel.md) |
+| Correr o cache do Laravel sobre o CacheerPHP | [CacheerPHP para Laravel](./laravel/index.md) |
+| Usar CacheerPHP nos serviços Laravel | [Integração com Laravel](./guias/laravel.md) |
 | Comparar com Laravel Cache | [Comparação e compromissos](./guias/cacheerphp-vs-laravel-cache.md) |
 | Escolher o armazenamento | [Stores e capacidades](./api/drivers.md) |
 | Guardar resultados dispendiosos | [Remember e locks](./guias/remember-e-locks.md) |

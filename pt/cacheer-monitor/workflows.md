@@ -57,7 +57,7 @@ O Key Inspector mostra hits, misses, escritas, taxa de acerto, contagens do cicl
 2. Consulte as contagens do ciclo de vida e a linha temporal para o driver e os metadados de namespace selecionados.
 3. Para pedir uma leitura ao vivo do valor, use o ícone de atualização do inspetor (**Refresh live value**). Requer `CACHEER_MONITOR_CAPTURE_VALUES=true`; a pré-visualização ao vivo só está disponível quando o processo do Monitor consegue resolver a store.
 
-Os eventos atuais da v6 não reportam metadados de TTL ou namespace. **Not reported** indica metadados em falta, não uma entrada que nunca expira.
+O CacheerPHP 6.1+ reporta TTL e namespace; a versão 6.0 não. **Not reported** indica metadados em falta, não uma entrada que nunca expira.
 
 ## Exportar o Histórico de Eventos
 
@@ -88,7 +88,7 @@ curl -X POST http://127.0.0.1:9966/api/events/cleanup-rotated \
 
 ## Configurar as Regras de Saúde do Dashboard
 
-1. Abra **Health rules**, abaixo de **Cache lifecycle**.
+1. Abra **Health rules**.
 2. Mantenha **Low hit-rate warning** ativo e escolha **Alert below** no cartão de eficiência, ou ative **Error-count warning** e **p95 latency warning** com os respetivos limiares.
 3. Defina **Minimum samples**, **Condition holds for** e **Snooze / repeat cooldown**. Consulte a [Configuração](configuration.md) para os valores padrão e o tipo de amostra usado por cada regra.
 4. Deixe o dashboard aberto. As condições são avaliadas em atualizações bem-sucedidas, para o intervalo temporal e namespace atuais.
@@ -98,7 +98,7 @@ As definições ficam guardadas neste navegador. Os avisos permanecem visíveis 
 
 ## Comparar Namespaces
 
-Use o filtro de namespace quando os eventos reportam explicitamente esse campo. Combine-o com o gráfico de drivers e os cartões de resumo para comparar tráfego registado. A ponte atual da v6 não fornece metadados de namespace; o filtro indica que não está disponível quando os registos apresentados não os incluem. O filtro `(default)` corresponde a registos explicitamente sem escopo, não a registos com metadados em falta.
+Use o filtro de namespace quando os eventos reportam explicitamente esse campo. Combine-o com o gráfico de drivers e os cartões de resumo para comparar tráfego registado. A ponte do CacheerPHP 6.0 não fornece metadados de namespace; o filtro indica que não está disponível quando os registos apresentados não os incluem. O filtro `(default)` corresponde a registos explicitamente sem escopo, não a registos com metadados em falta.
 
 ## Automatizar Relatórios
 
@@ -110,3 +110,56 @@ NOW=$(date +%s)
 HOUR_AGO=$((NOW - 3600))
 curl "http://127.0.0.1:9966/api/metrics?limit=0&from=$HOUR_AGO&until=$NOW"
 ```
+
+## Comparar padrões de chaves
+
+Abra **Key patterns** para agrupar chaves que diferem num identificador, como
+`user:123` e `user:456`, que passam a `user:{id}`. Os formatos incluem `{id}`,
+`{uuid}`, `{ulid}`, `{date}`, `{email}` e `{hash}`, por driver e namespace.
+Pode ordenar pela menor taxa de acerto (apenas padrões com pelo menos 20
+consultas), tempo poupado, escritas desperdiçadas, misses, consultas ou p95.
+Use a pesquisa de chaves para restringir os rankings.
+
+## Investigar failover
+
+O painel **Failover** requer CacheerPHP 6.1 e um cache resiliente. O estado vive
+em cada processo PHP; um pedido PHP-FPM curto costuma usar o fallback sem abrir
+o circuito. Por isso, as janelas de falha vêm da atividade no fallback: uma
+separação superior a um minuto inicia outra janela.
+
+Uma janela mostra **Recovery recorded** quando se segue um fecho de circuito ou
+uma reconciliação. Caso contrário, mostra **No recovery recorded yet**, o que
+não significa que a falha ainda esteja a decorrer.
+
+## Estimar tempo poupado
+
+O CacheerPHP 6.1 reporta a duração do loader num miss de `remember()` ou
+`flexible()`. Para cada padrão, o Monitor multiplica os hits pela diferença
+entre o tempo médio do loader e o tempo médio de um hit, assumindo que cada hit
+teria executado o loader uma vez. É uma estimativa.
+
+Padrões escritos com `set()` não têm tempos de loader; a poupança fica
+desconhecida, em vez de zero, e não entra no total. O painel mostra também o
+número de execuções em que baseia a estimativa.
+
+## Encontrar escritas desperdiçadas
+
+Uma escrita de valor (`put`, escrita sem expiração, lote ou `add`) é desperdiçada
+se foi sobrescrita, apagada ou expirou antes de qualquer hit a ler. A expiração
+só conta quando o TTL foi reportado e terminou antes do fim do log atual.
+
+Uma escrita que ainda pode estar válida, ou cujo TTL é desconhecido, não tem
+resultado conhecido e não é contada em nenhum dos lados. Flushes da store não
+são atribuídos a escritas individuais. Contadores, renovações e tags não são
+escritas de valores.
+
+## Investigar stampedes
+
+Um **stampede** é um conjunto de pelo menos 3 misses da mesma chave em 2
+segundos, vindos de pelo menos 2 processos. Com CacheerPHP 6.1, o Monitor também
+conta as execuções do loader nessa rajada. O single-flight de `remember()` evita
+a maioria destes casos quando a store suporta locks; investigue stores sem
+locks e loaders mais lentos do que o tempo de espera pelo lock.
+
+O `ArrayStore` vive num único processo. As suas escritas e misses são avaliadas
+por processo: outro processo com a mesma chave não usa a mesma cópia.

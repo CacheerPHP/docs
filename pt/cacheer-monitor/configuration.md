@@ -23,6 +23,9 @@ cp vendor/cacheerphp/monitor/.env.example .env
 | Variável | Padrão | Descrição |
 |---|---|---|
 | `CACHEER_MONITOR_EVENTS` | *(diretório temporário)* | Caminho absoluto, ou relativo à raiz do projeto, para o ficheiro de eventos JSONL. |
+| `CACHEER_MONITOR_ALLOW_ORIGIN` | Não definido | Ativa acesso à API a partir de outra origem explícita. O dashboard incluído usa a mesma origem. |
+| `CACHEER_MONITOR_CACHE_PATH` | Não definido | Diretório de cache da aplicação para pré-visualizações FileStore ao vivo. |
+| `CACHEER_MONITOR_CACHE_TABLE` | `cacheer_store` | Tabela da aplicação para pré-visualizações DatabaseStore ao vivo. |
 | `CACHEER_MONITOR_TOKEN` | — | Quando definido, as ações destrutivas da API (`clear`, `cleanup-rotated`) exigem este valor no cabeçalho `X-Monitor-Token`. |
 | `CACHEER_MONITOR_CAPTURE_VALUES` | `false` | Quando `true`, a camada de instrumentação grava uma pré-visualização dos valores em cache no payload de cada evento. Ver [Captura de Valores](#captura-de-valores) abaixo. |
 | `CACHEER_MONITOR_AUTO_REGISTER` | `true` | Defina como `false` para impedir que a ponte de autoload registe um listener, permitindo registar o seu |
@@ -109,4 +112,65 @@ Cada linha do ficheiro JSONL é um único evento do Cacheer:
 
 `value_preview`, `value_type`, `size_bytes`, `count` e `error` dependem do evento e da captura ativa. Os registos atuais da v6 usam os tipos `hit`, `miss`, `put`, `clear`, `flush`, `prune`, `error`, `promotion`, `stale_served`, `refresh` e `lock_contended`. Os sinais de ciclo de vida atuais não têm duração medida, mesmo que o registo contenha `duration_ms: 0`; o Monitor exclui-os das estatísticas de latência.
 
-O tipo de evento atual da v6 não transporta metadados de namespace ou TTL. Eventos antigos ou personalizados podem incluir `namespace` e `ttl`. Um namespace explicitamente vazio é o escopo padrão; um campo em falta não foi reportado. Nas escritas, `ttl: null` explícito significa duração ilimitada, enquanto a ausência de `ttl` significa desconhecido. O dashboard explica metadados em falta em vez de inventar valores.
+Os eventos do CacheerPHP 6.1+ transportam namespace, TTL e operação; os da versão 6.0 não. Eventos antigos ou personalizados também podem incluir `namespace` e `ttl`. Um namespace explicitamente vazio é o escopo padrão; um campo em falta não foi reportado. Nas escritas, `ttl: null` explícito significa duração ilimitada, enquanto a ausência de `ttl` significa desconhecido. O dashboard explica metadados em falta em vez de inventar valores.
+
+## Pré-visualizações ao vivo
+
+Os eventos capturados são a fonte principal das pré-visualizações. Com captura
+ativa, o inspector também pode ler valores de FileStore, DatabaseStore ou
+RedisStore usando as configurações partilhadas da aplicação: `DB_*`, `REDIS_*`
+e os caminhos/tabelas acima. Estas leituras não emitem telemetria.
+
+As leituras ao vivo usam o pipeline e o codificador de chaves predefinidos.
+Para codecs, compressão ou criptografia personalizados, ou stores locais ao
+processo como ArrayStore, ative a captura de valores na aplicação. O inspector
+explica leituras indisponíveis e mantém a última pré-visualização capturada
+quando a atualização falha. Um nome de apresentação com escopo só é resolvido
+ao vivo se identificar um único valor; nomes ambíguos usam a captura.
+
+## Escrita em lotes e rotação
+
+O `JsonlReporter` acumula linhas JSONL e escreve cada lote sob o `.lock`
+partilhado do ficheiro de eventos. Cada instância do reporter atribui um ID
+`instance` para diagnósticos entre processos. A rotação ocorre aos **10 MiB**.
+
+Um lote é escrito aos **256 eventos**, no primeiro evento pelo menos **um
+segundo** depois da escrita anterior, numa chamada a `$reporter->flush()` e no
+fim do processo, incluindo erros fatais de PHP. Com PHP-FPM, os eventos aparecem
+quando o pedido termina. Um worker inativo só escreve o último lote na próxima
+operação de cache ou ao sair; chame `flush()` no fim de cada pedido/job para
+escrever mais cedo. Um processo terminado sem shutdown, como por `SIGKILL`, pode
+perder o lote em memória.
+
+Os processos intercalam lotes no ficheiro. O fluxo do snapshot e o histórico das
+chaves são ordenados pelo timestamp. O snapshot mantém os eventos mais recentes
+antes de aplicar o limite; a ordem no ficheiro desempata timestamps iguais.
+
+Uma medição local do reporter com lotes registou cerca de **2,5 microssegundos
+por `get()` com o Monitor instalado**. O resultado depende da carga e da máquina;
+não é uma garantia de latência.
+
+## Acesso local e cabeçalhos
+
+O servidor escuta em `127.0.0.1` por omissão. O token opcional protege ações
+destrutivas, não autentica leituras nem torna a publicação segura. Adicione
+controlo de acesso separado antes de expor o dashboard à rede.
+
+As respostas normais da API usam `Cache-Control: no-store`; o stream SSE usa
+`no-cache`. O acesso entre origens está desligado por omissão. Defina
+`CACHEER_MONITOR_ALLOW_ORIGIN` apenas quando outra origem precisar de acesso;
+CORS não autentica utilizadores. A ocultação de campos sensíveis é uma proteção
+parcial: reveja dados capturados antes de partilhar logs ou exportações.
+
+## Operações e eventos por versão do núcleo
+
+Os mapeamentos base são `Hit` → `hit`, `Miss` → `miss`, `Write` → `put`,
+`Delete` → `clear`, `Clear` → `flush`, `Prune` → `prune` e `Failure` → `error`.
+Apagar uma chave e limpar a store são operações diferentes. Os eventos do ciclo
+de vida são `promotion`, `stale_served`, `refresh` e `lock_contended`.
+
+Com CacheerPHP 6.1+, a operação reportada distingue `touch` → `renew`, `tag` →
+`tag`, `increment` → `increment` e `clearTag` → `flush_tag`. Execuções de loaders
+usam `computed`; o failover usa `fallback_served`, `circuit_opened`,
+`circuit_closed` e `reconciled`. Estes relatórios não entram na latência das
+operações de cache. Sem metadados de operação, aplica-se o mapeamento base.

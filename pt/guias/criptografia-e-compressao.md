@@ -2,7 +2,8 @@
 
 Stores persistentes codificam cada valor por um pipeline —
 **serialize → comprime → criptografa** — e guardam o resultado em um envelope
-versionado e autenticado. Você descreve o pipeline com um
+versionado. A autenticação aplica-se quando a criptografia está ativa; um
+envelope não cifrado não é autenticado. Você descreve o pipeline com um
 [`PipelineConfig`](../api/configuracao.md) imutável e o passa para a store.
 
 ```php
@@ -78,3 +79,5 @@ $pipeline = PipelineConfig::default()
   cacheie segredos sem criptografia.
 - Veja a [referência de Compressão e criptografia](../api/compressao-criptografia.md)
   para o formato do envelope.
+
+A compressão gzip requer `ext-zlib`.

@@ -23,6 +23,9 @@ cp vendor/cacheerphp/monitor/.env.example .env
 | Variable | Default | Description |
 |---|---|---|
 | `CACHEER_MONITOR_EVENTS` | *(temp dir)* | Absolute or project-root-relative path to the JSONL events file. |
+| `CACHEER_MONITOR_ALLOW_ORIGIN` | Unset | Opt in to cross-origin API access for a specific origin. The bundled dashboard uses the same origin. |
+| `CACHEER_MONITOR_CACHE_PATH` | Unset | Application cache directory for live FileStore previews. |
+| `CACHEER_MONITOR_CACHE_TABLE` | `cacheer_store` | Application table for live DatabaseStore previews. |
 | `CACHEER_MONITOR_TOKEN` | — | When set, destructive API actions (`clear`, `cleanup-rotated`) require this value in the `X-Monitor-Token` request header. |
 | `CACHEER_MONITOR_CAPTURE_VALUES` | `false` | When `true`, the instrumentation layer records a preview of cached values in each event payload. See [Value Capture](#value-capture) below. |
 | `CACHEER_MONITOR_AUTO_REGISTER` | `true` | Set to `false` to stop the autoload bridge registering a listener, so you can wire one yourself |
@@ -54,7 +57,7 @@ CACHEER_MONITOR_REDACT_KEYS=ssn,credit_card,dob
 
 ## Dashboard Health Rules
 
-Open **Health rules** below **Cache lifecycle**. These settings are stored in the browser, separately from environment variables. They apply to successful dashboard refreshes while the page is open, using the current time range and namespace. Key search and operation filters do not affect the rules.
+Open **Health rules**. These settings are stored in the browser, separately from environment variables. They apply to successful dashboard refreshes while the page is open, using the current time range and namespace. Key search and operation filters do not affect the rules.
 
 | Setting | Default | Behaviour |
 |---|---|---|
@@ -109,4 +112,64 @@ Each line in the JSONL file is a single Cacheer event:
 
 `value_preview`, `value_type`, `size_bytes`, `count`, and `error` depend on the event and enabled capture. Current v6 records use `hit`, `miss`, `put`, `clear`, `flush`, `prune`, `error`, `promotion`, `stale_served`, `refresh`, and `lock_contended` as event types. Lifecycle markers currently carry no measured duration even if their record contains `duration_ms: 0`; Monitor excludes them from latency statistics.
 
-The current v6 event type does not carry namespace or TTL metadata. Older or custom payloads may include `namespace` and `ttl`. An explicit empty namespace is the default scope; a missing field is unreported. For writes, explicit `ttl: null` means forever, while a missing `ttl` means unknown. The dashboard explains missing metadata instead of inventing values.
+CacheerPHP 6.1+ events carry namespace, TTL, and operation metadata; 6.0 events do not. Older or custom payloads may also include `namespace` and `ttl`. An explicit empty namespace is the default scope; a missing field is unreported. For writes, explicit `ttl: null` means forever, while a missing `ttl` means unknown. The dashboard explains missing metadata instead of inventing values.
+
+## Live value previews
+
+Captured events are the primary source of previews. When value capture is enabled,
+the inspector can also read a live value from FileStore, DatabaseStore, or
+RedisStore using the application's shared connection settings (`DB_*`, `REDIS_*`,
+and the cache path/table above). These reads do not emit telemetry events.
+
+Live reads use the default storage pipeline and key encoder. For custom codecs,
+compression, encryption, or process-local stores such as ArrayStore, enable value
+capture in the application. The inspector explains unavailable lookups and keeps
+the last captured preview when a live refresh fails. Scoped v6 keys are resolved
+only when their display name identifies one stored value; ambiguous names fall
+back to captured previews.
+
+## Buffered reporting and rotation
+
+`JsonlReporter` buffers encoded JSONL records and appends each batch under the
+events file's shared `.lock`. Each reporter instance attaches an `instance` ID
+for multi-process diagnostics. The file rotates at **10 MiB** by default.
+
+A batch flushes at **256 events**, on the first event at least **one second**
+after the previous flush, on explicit `$reporter->flush()`, and at process exit,
+including PHP fatal errors. PHP-FPM request batches appear when the request
+finishes. An idle long-running worker flushes its last batch on its next cache
+operation or at exit; call `flush()` at job/request boundaries to write sooner.
+A process killed without shutdown, such as `SIGKILL`, can lose its buffered batch.
+
+Processes interleave by batch, so snapshot feeds and key history order records by
+timestamp. The snapshot retains the newest matching events before its feed limit
+is applied; file order breaks timestamp ties.
+
+A local buffered-reporter benchmark measured about **2.5 microseconds per
+`get()` with Monitor installed**. This is workload- and machine-dependent, not a
+latency guarantee.
+
+## Local access and response headers
+
+The server binds to `127.0.0.1` by default. The optional token protects destructive
+actions; it does not authenticate read endpoints or make public deployment safe.
+Add separate access control before exposing the dashboard to a network.
+
+Ordinary API responses use `Cache-Control: no-store`; the SSE stream uses
+`no-cache`. Cross-origin API access is off by default. Set
+`CACHEER_MONITOR_ALLOW_ORIGIN` only when another origin intentionally needs access;
+CORS does not authenticate users. Preview redaction is best effort, so review
+captured content before sharing logs or exports.
+
+## Operation and event types by core version
+
+The base mappings are `Hit` → `hit`, `Miss` → `miss`, `Write` → `put`,
+`Delete` → `clear`, `Clear` → `flush`, `Prune` → `prune`, and `Failure` → `error`.
+Deleting a key and flushing a store are separate operations. Lifecycle types are
+`promotion`, `stale_served`, `refresh`, and `lock_contended`.
+
+With CacheerPHP 6.1+, a reported operation distinguishes `touch` → `renew`,
+`tag` → `tag`, `increment` → `increment`, and `clearTag` → `flush_tag`.
+Loader runs use `computed`; failover uses `fallback_served`, `circuit_opened`,
+`circuit_closed`, and `reconciled`. These reports are excluded from cache-operation
+latency statistics. Without operation metadata, the base mapping applies.

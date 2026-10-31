@@ -1,6 +1,8 @@
-# Usar CacheerPHP no Laravel
+# Registar o CacheerPHP nos serviços Laravel
 
 Registe o CacheerPHP no service container e injete o contrato `Cache` nos serviços. Este guia usa Laravel 13.x e CacheerPHP 6.x. O binding adiciona um cache para os seus serviços; a configuração de cache existente do Laravel continua a controlar as funcionalidades do framework.
+
+Para que as próprias funcionalidades de cache do Laravel (`Cache::`, locks, filas, scheduler) corram sobre o CacheerPHP, use o [CacheerPHP para Laravel](../laravel/index.md), um driver de cache. Este guia é para manter o cache do Laravel como está.
 
 Se está a decidir se deve adicionar CacheerPHP, [compare as duas APIs](./cacheerphp-vs-laravel-cache.md). Para um exemplo independente e pronto a executar, consulte os [primeiros passos](../primeiros-passos/index.md).
 

@@ -21,7 +21,7 @@ O [componente Illuminate Cache](https://github.com/illuminate/cache/blob/13.x/co
 
 | Decisão | CacheerPHP 6.x | Laravel Cache 13.x |
 | --- | --- | --- |
-| Integração | Construa e injete `Contracts\Cache`; registe o binding no Laravel | Configuração, facade e contratos integrados; componente Illuminate separado disponível |
+| Integração | Construa e injete `Contracts\Cache`; no Laravel, use o driver de cache `cacheer` por trás de `Cache::` ou registe o binding | Configuração, facade e contratos integrados; componente Illuminate separado disponível |
 | Armazenamento integrado | Ficheiros, array, base de dados PDO e Redis | Inclui também Memcached, DynamoDB e armazenamento em discos de filesystem |
 | Guardar resultados calculados | `remember()` coordena misses quando há locks, dentro dos limites de lease/timeout | `remember()`; locks explícitos disponíveis |
 | Servir dados stale | `flexible()`; executor predefinido síncrono, execução diferida configurável | `flexible()` usa o ciclo de execução diferida do Laravel |
@@ -59,6 +59,7 @@ A distinção útil está na configuração, composição e invalidação. Nomes
 ## Experimentar o caminho adequado
 
 - [Executar um exemplo completo de CacheerPHP](../primeiros-passos/index.md): instalar, observar um miss e um hit e invalidar um resultado.
-- [Usar CacheerPHP dentro do Laravel](./laravel.md): binding num provider e um serviço de catálogo com injeção.
+- [Correr o cache do Laravel sobre o CacheerPHP](../laravel/index.md): o driver `cacheer` mantém `Cache::`, locks, filas e scheduler, com o CacheerPHP por baixo.
+- [Registar o CacheerPHP nos serviços Laravel](./laravel.md): binding num provider e um serviço de catálogo com injeção, mantendo o cache do Laravel como está.
 - [Ligar o Cacheer Monitor](../cacheer-monitor/quick-start.md): inspecionar o comportamento antes de adicionar mais camadas.
 - [Manter o cache nativo do Laravel](https://laravel.com/docs/13.x/cache): seguir as convenções integradas quando resolvem o problema.

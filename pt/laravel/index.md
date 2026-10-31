@@ -9,7 +9,7 @@ Requisitos: PHP 8.3+, Laravel 12 ou 13 e CacheerPHP 6.
 | Pretende… | Use |
 | --- | --- |
 | Que as funcionalidades de cache do Laravel (`Cache::`, locks, filas, scheduler) corram sobre o CacheerPHP | **O driver `cacheer`** — esta secção |
-| Um cache CacheerPHP separado para os seus serviços, mantendo o cache do Laravel como está | [Um binding no container](../guias/laravel.md) — sem pacote adicional |
+| Um cache CacheerPHP separado para os seus serviços, mantendo o cache do Laravel como está | [Um binding no container](../guias/laravel.md) |
 
 Pode combinar os dois: o driver também regista o contrato `Cache` do CacheerPHP, para que os serviços o possam injetar e usar funcionalidades que `Cache::` não expressa, como a invalidação por tags.
 

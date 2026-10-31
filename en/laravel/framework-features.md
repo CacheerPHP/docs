@@ -1,6 +1,6 @@
 # Laravel features on CacheerPHP
 
-With a `cacheer` store as the default, Laravel's cache-backed features run on CacheerPHP without code changes. This page covers what to expect from each.
+On a [routed store](./index.md#routed-stores), Laravel's cache-backed features work exactly as before: their operations go straight to the store. With a `cacheer` store as the default, they run on CacheerPHP's own storage without code changes; this page covers what to expect from each.
 
 ## The cache API
 
@@ -77,7 +77,7 @@ See [scopes](../guides/scopes.md), [tags](../tutorials/example-10-tagging.md), a
 
 ## Monitoring
 
-Install [Cacheer Monitor](../cacheer-monitor/quick-start.md) and every `cacheer` store reports its operations, with no further setup.
+Install [Cacheer Monitor](../cacheer-monitor/quick-start.md) and every routed store and every `cacheer` store reports its operations, with no further setup. Routed stores all appear as `LaravelStore`; see [routed stores](./limitations.md#routed-stores).
 
 ## Testing
 

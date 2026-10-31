@@ -1,8 +1,45 @@
 # Configure CacheerPHP for Laravel
 
-Each `cacheer` store is an entry in `config/cache.php`. You can define several, for example a Redis store as the default and a file store for local data.
+Installing the package routes your existing stores through CacheerPHP; the first section covers that. The rest of the page covers the `cacheer` driver. Each `cacheer` store is an entry in `config/cache.php`, and you can define several, for example a Redis store as the default and a file store for local data.
+
+## Routing your existing stores
+
+Routing needs no configuration. Each store Laravel builds runs through CacheerPHP: reads and writes go through it in the store's own format, under the same keys, while `add()`, counters, `touch()`, locks, and tags go straight to the store, with its own semantics and results.
+
+To leave one store as it is, add `'cacheer' => false` to it:
+
+```php
+'redis' => [
+    'driver' => 'redis',
+    'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
+    'cacheer' => false,
+],
+```
+
+To turn routing off for every store, add a `cacheer` entry to `config/cache.php`, beside `stores`, and set `CACHEER_ROUTE=false`:
+
+```php
+'cacheer' => [
+    'route' => env('CACHEER_ROUTE', true),
+],
+```
+
+Some stores stay native, because Laravel's own code depends on them in ways routing cannot reproduce:
+
+| Store | Why it is not routed |
+| --- | --- |
+| A `cacheer` store | It already runs on CacheerPHP. |
+| `array`, and other stores without `add()` or locks | Laravel's cache repository emulates `add()` for them, and routing must mirror a store exactly. |
+| `null` | It stores nothing. |
+| `failover`, and `Cache::memo()` | They wrap other stores, which are routed themselves. |
+| DynamoDB | Laravel's scheduler and command mutexes check for `DynamoDbStore`. |
+| Redis with a phpredis `serializer` or `compression` option | Laravel's rate limiter checks for `RedisStore` to bypass that serialization. |
+
+`php artisan cacheer:doctor` lists each store, with the reason when it is not routed. If another package replaces Laravel's cache manager, no store is routed, and `cacheer:doctor` says so.
 
 ## Options
+
+A `cacheer` store takes these options.
 
 | Option | Default | Description |
 | --- | --- | --- |

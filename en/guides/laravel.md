@@ -11,7 +11,7 @@ First, [compare the two cache APIs](./cacheerphp-vs-laravel-cache.md) if you are
 From your Laravel application root:
 
 ```sh
-composer require silviooosilva/cacheer-php:"^6.0"
+composer require cacheerphp/laravel
 ```
 
 ## 2. Bind the cache

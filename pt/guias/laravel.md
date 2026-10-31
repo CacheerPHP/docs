@@ -11,7 +11,7 @@ Se está a decidir se deve adicionar CacheerPHP, [compare as duas APIs](./cachee
 Na raiz da aplicação Laravel:
 
 ```sh
-composer require silviooosilva/cacheer-php:"^6.0"
+composer require cacheerphp/laravel
 ```
 
 ## 2. Registar o cache

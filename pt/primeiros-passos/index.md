@@ -94,7 +94,7 @@ O comando remove apenas `products` no escopo `catalog`. O callback volta a ler o
 | A sua aplicação | Próximo passo |
 | --- | --- |
 | PHP puro ou um worker | Crie o cache no bootstrap e injete `Contracts\Cache` nos serviços. O exemplo acima está pronto a executar. |
-| Laravel | [Corra `Cache::` sobre o CacheerPHP com o driver cacheer](../laravel/index.md) ou [registe o cache num service provider e injete-o num serviço de catálogo](../guias/laravel.md). |
+| Laravel | [Corra o cache do Laravel através do CacheerPHP](../laravel/index.md) ou [registe o cache num service provider e injete-o num serviço de catálogo](../guias/laravel.md). |
 | Ainda está a decidir | [Compare CacheerPHP com Laravel Cache](../guias/cacheerphp-vs-laravel-cache.md). |
 | Quer ver hits e misses | [Ligue o Cacheer Monitor](../cacheer-monitor/quick-start.md). |
 

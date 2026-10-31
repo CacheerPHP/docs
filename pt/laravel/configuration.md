@@ -1,8 +1,45 @@
 # Configurar o CacheerPHP para Laravel
 
-Cada store `cacheer` é uma entrada em `config/cache.php`. Pode definir várias, por exemplo uma store Redis como predefinida e uma store de ficheiros para dados locais.
+Instalar o pacote encaminha as stores que já tem através do CacheerPHP; a primeira secção trata disso. O resto da página trata do driver `cacheer`. Cada store `cacheer` é uma entrada em `config/cache.php`, e pode definir várias, por exemplo uma store Redis como predefinida e uma store de ficheiros para dados locais.
+
+## Encaminhar as stores existentes
+
+O encaminhamento não precisa de configuração. Cada store que o Laravel constrói passa a correr através do CacheerPHP: as leituras e escritas passam por ele no formato da própria store e com as mesmas chaves, enquanto `add()`, contadores, `touch()`, locks e tags vão diretamente para a store, com a semântica e os resultados dela.
+
+Para deixar uma store como está, acrescente-lhe `'cacheer' => false`:
+
+```php
+'redis' => [
+    'driver' => 'redis',
+    'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
+    'cacheer' => false,
+],
+```
+
+Para desligar o encaminhamento em todas as stores, acrescente uma entrada `cacheer` a `config/cache.php`, ao lado de `stores`, e defina `CACHEER_ROUTE=false`:
+
+```php
+'cacheer' => [
+    'route' => env('CACHEER_ROUTE', true),
+],
+```
+
+Algumas stores ficam nativas, porque o próprio código do Laravel depende delas de formas que o encaminhamento não consegue reproduzir:
+
+| Store | Porque não é encaminhada |
+| --- | --- |
+| Uma store `cacheer` | Já corre sobre o CacheerPHP. |
+| `array`, e outras stores sem `add()` ou locks | O repositório de cache do Laravel emula `add()` para elas, e o encaminhamento tem de reproduzir cada store com exatidão. |
+| `null` | Não guarda nada. |
+| `failover`, e `Cache::memo()` | Envolvem outras stores, que são encaminhadas por si. |
+| DynamoDB | Os mutexes do scheduler e dos comandos do Laravel verificam se a store é uma `DynamoDbStore`. |
+| Redis com a opção `serializer` ou `compression` do phpredis | O rate limiter do Laravel verifica se a store é uma `RedisStore` para contornar essa serialização. |
+
+`php artisan cacheer:doctor` lista cada store, com o motivo quando não é encaminhada. Se outro pacote substituir o gestor de cache do Laravel, nenhuma store é encaminhada, e o `cacheer:doctor` indica-o.
 
 ## Opções
+
+Uma store `cacheer` aceita estas opções.
 
 | Opção | Predefinição | Descrição |
 | --- | --- | --- |

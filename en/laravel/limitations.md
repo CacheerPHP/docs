@@ -1,6 +1,15 @@
 # Differences and limitations
 
-A `cacheer` store follows Laravel's cache contracts, but a few behaviors differ from Laravel's built-in stores. Each one is deliberate; this page explains why and what to do instead.
+Routed stores keep Laravel's behavior; their few differences are in the first section. The rest of the page covers a `cacheer` store, which follows Laravel's cache contracts but differs from Laravel's built-in stores in a few deliberate ways. Each section explains why and what to do instead.
+
+## Routed stores
+
+A routed store behaves as the store it wraps, with these differences:
+
+- `Cache::getStore()` returns the routed store, not the original class. Code that checks for a class, such as `Cache::getStore() instanceof RedisStore`, should check `Cache::getStore()->native()` instead. Laravel's own checks of this kind are covered: the stores they look for are not routed.
+- Writes that go through CacheerPHP report success as `true` or `false`. A custom store that returns something else from `put()`, `putMany()`, `forever()`, `forget()`, or `flush()` gets a boolean back.
+- Keys CacheerPHP cannot represent (empty, longer than 1024 bytes, or containing control characters) and lifetimes of zero or less go straight to the store, and are not reported to Cacheer Monitor.
+- Cacheer Monitor shows every routed store as `LaravelStore`, so it cannot yet tell a Redis store from a file store. Stores that are not routed are not reported.
 
 ## No `Cache::tags()`
 

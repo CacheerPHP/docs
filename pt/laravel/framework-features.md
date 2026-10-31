@@ -1,6 +1,6 @@
 # Funcionalidades do Laravel sobre o CacheerPHP
 
-Com uma store `cacheer` como predefinida, as funcionalidades do Laravel que usam o cache correm sobre o CacheerPHP sem alterações de código. Esta página descreve o que esperar de cada uma.
+Numa [store encaminhada](./index.md#stores-encaminhadas), as funcionalidades do Laravel que usam o cache funcionam exatamente como antes: as suas operações vão diretamente para a store. Com uma store `cacheer` como predefinida, correm sobre o armazenamento próprio do CacheerPHP sem alterações de código; esta página descreve o que esperar de cada uma.
 
 ## A API de cache
 
@@ -77,7 +77,7 @@ Consulte [escopos](../guias/escopos.md), [tags](../tutoriais/exemplo-10-tagging.
 
 ## Monitorização
 
-Instale o [Cacheer Monitor](../cacheer-monitor/quick-start.md) e todas as stores `cacheer` passam a reportar as suas operações, sem mais configuração.
+Instale o [Cacheer Monitor](../cacheer-monitor/quick-start.md) e todas as stores encaminhadas e todas as stores `cacheer` passam a reportar as suas operações, sem mais configuração. As stores encaminhadas aparecem todas como `LaravelStore`; consulte [stores encaminhadas](./limitations.md#stores-encaminhadas).
 
 ## Testes
 

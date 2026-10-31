@@ -1,6 +1,15 @@
 # Diferenças e limitações
 
-Uma store `cacheer` segue os contratos de cache do Laravel, mas alguns comportamentos diferem das stores nativas do Laravel. Cada um é intencional; esta página explica porquê e o que fazer em alternativa.
+As stores encaminhadas mantêm o comportamento do Laravel; as poucas diferenças que têm estão na primeira secção. O resto da página trata de uma store `cacheer`, que segue os contratos de cache do Laravel mas difere das stores nativas em alguns pontos intencionais. Cada secção explica porquê e o que fazer em alternativa.
+
+## Stores encaminhadas
+
+Uma store encaminhada comporta-se como a store que envolve, com estas diferenças:
+
+- `Cache::getStore()` devolve a store encaminhada, não a classe original. Código que verifica a classe, como `Cache::getStore() instanceof RedisStore`, deve verificar `Cache::getStore()->native()`. As verificações deste tipo feitas pelo próprio Laravel estão cobertas: as stores que procuram não são encaminhadas.
+- As escritas que passam pelo CacheerPHP indicam o sucesso com `true` ou `false`. Uma store personalizada que devolva outra coisa em `put()`, `putMany()`, `forever()`, `forget()` ou `flush()` recebe um booleano.
+- As chaves que o CacheerPHP não consegue representar (vazias, com mais de 1024 bytes ou com caracteres de controlo) e os tempos de vida de zero ou menos vão diretamente para a store e não são reportados ao Cacheer Monitor.
+- O Cacheer Monitor mostra todas as stores encaminhadas como `LaravelStore`, por isso ainda não distingue uma store Redis de uma store de ficheiros. As stores que não são encaminhadas não são reportadas.
 
 ## Sem `Cache::tags()`
 

@@ -2,7 +2,7 @@
 
 Bind CacheerPHP in the service container and inject its `Cache` contract into application services. This guide targets Laravel 13.x and CacheerPHP 6.x. The binding adds a cache for your services; Laravel's existing cache configuration continues to control its own framework features.
 
-To run Laravel's own cache features (`Cache::`, locks, queues, the scheduler) on CacheerPHP instead, use [CacheerPHP for Laravel](../laravel/index.md), a cache driver. This guide is for keeping Laravel's cache as it is.
+The package this guide installs, [CacheerPHP for Laravel](../laravel/index.md), also routes Laravel's own stores through CacheerPHP with unchanged results, and adds a `cacheer` driver that runs Laravel's cache features (`Cache::`, locks, queues, the scheduler) on CacheerPHP's own storage. This guide adds a separate cache for your services.
 
 First, [compare the two cache APIs](./cacheerphp-vs-laravel-cache.md) if you are deciding whether to add CacheerPHP. For a runnable standalone example, use [getting started](../getting-started/index.md).
 

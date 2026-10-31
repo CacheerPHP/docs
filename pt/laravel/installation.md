@@ -1,6 +1,6 @@
 # Instalar o CacheerPHP para Laravel
 
-Esta página adiciona uma store CacheerPHP a uma aplicação Laravel 12 ou 13 e torna-a o cache predefinido. Para voltar atrás, basta alterar uma linha no `.env`.
+Esta página instala o CacheerPHP para Laravel numa aplicação Laravel 12 ou 13, mostra como correm as suas stores de cache e, se quiser, adiciona uma store sobre o armazenamento próprio do CacheerPHP.
 
 ## 1. Instalar o pacote
 
@@ -10,9 +10,35 @@ Na raiz da aplicação:
 composer require cacheerphp/laravel
 ```
 
-O Laravel deteta o service provider automaticamente. O pacote instala o CacheerPHP 6 como dependência.
+O Laravel deteta o service provider automaticamente. O pacote instala o CacheerPHP 6.1.1 ou posterior como dependência.
 
-## 2. Adicionar uma store
+## 2. Ver as suas stores
+
+As stores que já tem passam a correr através do CacheerPHP, sem configuração. Para ver quais:
+
+```sh
+php artisan cacheer:doctor
+```
+
+```text
++----------+----------+------------------------------------------------------------------------+
+| Store    | Driver   | CacheerPHP                                                             |
++----------+----------+------------------------------------------------------------------------+
+| array    | array    | not routed: it lacks add() or locks, which routing must mirror exactly |
+| database | database | routed                                                                 |
+| file     | file     | routed                                                                 |
+| redis    | redis    | routed                                                                 |
+| failover | failover | not routed: it wraps other stores, which are routed themselves         |
++----------+----------+------------------------------------------------------------------------+
+```
+
+Uma store encaminhada devolve o que devolvia antes e mantém os seus dados. Uma store que não é encaminhada fica exatamente como estava. Consulte a [configuração](./configuration.md#encaminhar-as-stores-existentes) para ver porque algumas stores ficam nativas e como desligar o encaminhamento.
+
+Para acompanhar o tráfego, instale o [Cacheer Monitor](../cacheer-monitor/quick-start.md): todas as stores encaminhadas e todas as stores `cacheer` reportam para ele sem mais configuração.
+
+Se é tudo o que precisa, terminou. Os passos seguintes adicionam uma store sobre o armazenamento próprio do CacheerPHP, para failover, cache em camadas ou criptografia.
+
+## 3. Adicionar uma store `cacheer`
 
 Em `config/cache.php`, adicione uma store que use o driver `cacheer`:
 
@@ -30,7 +56,7 @@ Em `config/cache.php`, adicione uma store que use o driver `cacheer`:
 
 O backend `file` não precisa de serviços e guarda as entradas em `storage/framework/cache/cacheer`. Para Redis, base de dados, failover ou criptografia, consulte a [configuração](./configuration.md).
 
-## 3. Torná-la a predefinida
+## 4. Torná-la a predefinida
 
 No `.env`:
 
@@ -46,7 +72,7 @@ Um `CACHE_STORE=database` existente prevalece sobre o valor de recurso em
 
 Tudo o que usa a store de cache predefinida passa a correr sobre o CacheerPHP: `Cache::`, `cache()`, locks, jobs únicos, o scheduler e os rate limiters. Para a usar apenas em algumas chamadas, mantenha a predefinição e chame `Cache::store('cacheer')`.
 
-## 4. Criar as tabelas (apenas backend de base de dados)
+## 5. Criar as tabelas (apenas backend de base de dados)
 
 Ignore este passo, a menos que uma store `cacheer` use `'backend' => 'database'`, como store principal ou como fallback. Publique a migration:
 
@@ -71,7 +97,7 @@ Mantenha a lista fixa depois disso, para que o rollback reverta a migration
 original mesmo que `config/cache.php` mude. Use uma nova migration ao adicionar
 outro backend de base de dados.
 
-## 5. Confirmar que funciona
+## 6. Confirmar que funciona
 
 ```sh
 php artisan tinker
@@ -83,10 +109,8 @@ Cache::get('hello');          // "world"
 Cache::getStore()::class;     // "Cacheer\Laravel\CacheerStore"
 ```
 
-Para acompanhar o tráfego, instale o [Cacheer Monitor](../cacheer-monitor/quick-start.md); todas as stores `cacheer` reportam para ele sem mais configuração.
-Os eventos de failover requerem CacheerPHP 6.1 e uma versão compatível do Monitor.
-Os eventos normais de cache também funcionam com CacheerPHP 6.0.
-
 ## Voltar atrás
 
-Defina `CACHE_STORE` com a store anterior. O CacheerPHP e o Laravel usam formatos de armazenamento diferentes, por isso a outra store começa sem as entradas escritas pelo CacheerPHP; os valores são recalculados à medida que são pedidos.
+Para deixar de encaminhar, remova o pacote ou [desligue o encaminhamento](./configuration.md#encaminhar-as-stores-existentes). As stores encaminhadas mantêm o formato do próprio Laravel, por isso não há nada a migrar.
+
+Para deixar de usar uma store `cacheer`, defina `CACHE_STORE` com a store anterior. O CacheerPHP e o Laravel usam formatos de armazenamento diferentes, por isso a outra store começa sem as entradas escritas pelo CacheerPHP; os valores são recalculados à medida que são pedidos.

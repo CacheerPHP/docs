@@ -16,7 +16,16 @@ Se um trecho de código adquire muitos locks por pedido, meça antes de mudar.
 
 ## Os contadores são números inteiros
 
-`Cache::increment('visits', 1.5)` lança `InvalidArgumentException` em vez de truncar o valor, e incrementar um valor que não seja inteiro falha sem o alterar.
+`Cache::increment('visits', 1.5)` lança `InvalidArgumentException` em vez de truncar o valor, e incrementar um valor que não seja inteiro falha sem o alterar. Isso inclui uma string numérica, como `'5'` guardado com `Cache::put()`, que as stores Redis e de base de dados do Laravel incrementariam. Guarde os contadores como inteiros, ou crie-os com `increment()`.
+
+## Contadores e locks durante uma falha
+
+Enquanto o backend principal está em baixo, os seus contadores e locks ficam indisponíveis, mesmo com um [fallback](./configuration.md#failover): um contador ou lock guardado no fallback não seria partilhado com outros servidores.
+
+- Os locks não são adquiridos: `get()` devolve `false`.
+- `Cache::add()`, `increment()` e `decrement()` lançam `StoreOperationFailedException`.
+
+Os rate limiters do Laravel usam `add()` e `increment()`, por isso as rotas com o middleware `throttle` falham até o principal recuperar. Se tiverem de continuar a funcionar, aponte `cache.limiter` em `config/cache.php` para uma store que não dependa do mesmo backend.
 
 ## Chaves
 
@@ -26,9 +35,9 @@ As chaves têm no máximo 1024 bytes e não podem conter caracteres de controlo.
 
 O backend redis abre a sua própria ligação com os dados da ligação do Laravel que indicar. Ignora as opções `prefix`, `serializer` e `compression` do redis do Laravel, e clusters Redis não são suportados. Consulte a [configuração](./configuration.md#backends).
 
-## Ligações de base de dados em workers de longa duração
+## Transações de base de dados
 
-O backend de base de dados usa a ligação PDO da ligação do Laravel no momento em que a store é usada pela primeira vez. Num worker de longa duração, se o Laravel voltar a ligar-se mais tarde, a store não acompanha essa nova ligação; reinicie os workers depois de um failover da base de dados.
+O backend de base de dados usa a ligação que indicar em `connection` e acompanha-a quando o Laravel volta a ligar-se. As escritas no cache e os registos de lock feitos dentro de `DB::transaction()` nessa ligação pertencem à transação: são revertidos com ela, e os outros processos só os veem depois do commit. Para manter o cache independente das suas transações, defina uma segunda ligação para a mesma base de dados e indique-a em `connection`.
 
 ## O failover é por processo
 

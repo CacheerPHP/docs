@@ -9,7 +9,8 @@ With a `cacheer` store as the default, Laravel's cache-backed features run on Ca
 - `Cache::add()` is atomic across processes: CacheerPHP serializes the check and the write with a lock.
 - `Cache::increment()` and `decrement()` start a missing counter at zero. The new counter never expires; an existing one keeps its lifetime. Amounts must be whole numbers.
 - `Cache::touch()` extends a live entry's lifetime and never revives an expired one.
-- `Cache::flush()` clears only the store's [prefix](./configuration.md#prefix).
+- `Cache::flush()` clears only the store's [prefix](./configuration.md#prefix), and leaves held locks held.
+- `Cache::putMany()` accepts numeric keys, such as models keyed by ID.
 - `Cache::flexible()` uses Laravel's own implementation, which stores its timestamps and refresh lock through the driver.
 
 ## Locks
@@ -26,7 +27,7 @@ Locks keep Laravel's semantics:
 
 - `$lock->owner()` and `Cache::restoreLock($name, $owner)` let another process release a lock, as queued jobs do.
 - `forceRelease()` frees a lock whatever its owner.
-- `refresh()` restarts the lifetime, only for the current owner.
+- `refresh()` restarts the lifetime, only for the current owner. A lock rebuilt with `restoreLock()` does not know its lifetime, so `refresh()` without seconds keeps the current one.
 - A lock with no lifetime (`Cache::lock('name')`) is held until it is released.
 
 Releases are owner-safe: if a holder's lock expires and another process takes it, the first holder can no longer release it. During a backend outage, locks fail closed: `get()` returns `false`. The cost is extra round trips; see [differences and limitations](./limitations.md#locks-cost-more-round-trips).
@@ -44,6 +45,8 @@ They use the default cache store unless the feature names another one, for examp
 ## Rate limiting
 
 `RateLimiter::attempt()`, `hit()`, and `tooManyAttempts()`, and the `throttle` middleware for limiters backed by the cache, count hits with atomic `add()` and `increment()`, so limits hold across workers that share the backend.
+
+While the primary backend is down, `add()` and `increment()` throw, so rate-limited routes fail even with a fallback configured. See [counters and locks during an outage](./limitations.md#counters-and-locks-during-an-outage).
 
 ## CacheerPHP features beyond `Cache::`
 

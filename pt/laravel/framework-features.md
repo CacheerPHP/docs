@@ -9,7 +9,8 @@ Com uma store `cacheer` como predefinida, as funcionalidades do Laravel que usam
 - `Cache::add()` é atómico entre processos: o CacheerPHP serializa a verificação e a escrita com um lock.
 - `Cache::increment()` e `decrement()` começam um contador inexistente em zero. O novo contador nunca expira; um contador existente mantém o seu tempo de vida. Os valores têm de ser números inteiros.
 - `Cache::touch()` prolonga o tempo de vida de uma entrada válida e nunca reativa uma entrada expirada.
-- `Cache::flush()` limpa apenas o [prefixo](./configuration.md#prefixo) da store.
+- `Cache::flush()` limpa apenas o [prefixo](./configuration.md#prefixo) da store e mantém os locks em uso.
+- `Cache::putMany()` aceita chaves numéricas, como modelos indexados pelo ID.
 - `Cache::flexible()` usa a implementação do próprio Laravel, que guarda os seus timestamps e o lock de atualização através do driver.
 
 ## Locks
@@ -26,7 +27,7 @@ Os locks mantêm a semântica do Laravel:
 
 - `$lock->owner()` e `Cache::restoreLock($name, $owner)` permitem que outro processo liberte um lock, como fazem os jobs em fila.
 - `forceRelease()` liberta um lock, seja qual for o dono.
-- `refresh()` reinicia o tempo de vida, apenas para o dono atual.
+- `refresh()` reinicia o tempo de vida, apenas para o dono atual. Um lock reconstruído com `restoreLock()` não conhece o seu tempo de vida, por isso `refresh()` sem segundos mantém o atual.
 - Um lock sem tempo de vida (`Cache::lock('name')`) fica retido até ser libertado.
 
 A libertação é segura quanto ao dono: se o lock de um processo expirar e outro processo o adquirir, o primeiro já não o pode libertar. Durante uma falha do backend, os locks recusam por segurança: `get()` devolve `false`. O custo são viagens de ida e volta adicionais; consulte [diferenças e limitações](./limitations.md#os-locks-custam-mais-viagens-de-ida-e-volta).
@@ -44,6 +45,8 @@ Usam a store de cache predefinida, a menos que a funcionalidade indique outra, p
 ## Rate limiting
 
 `RateLimiter::attempt()`, `hit()` e `tooManyAttempts()`, e o middleware `throttle` para limitadores baseados no cache, contam os pedidos com `add()` e `increment()` atómicos, por isso os limites mantêm-se entre workers que partilham o backend.
+
+Enquanto o backend principal está em baixo, `add()` e `increment()` lançam exceções, por isso as rotas com limite falham mesmo com um fallback configurado. Consulte [contadores e locks durante uma falha](./limitations.md#contadores-e-locks-durante-uma-falha).
 
 ## Funcionalidades do CacheerPHP além de `Cache::`
 

@@ -14,10 +14,12 @@ Cada store `cacheer` é uma entrada em `config/cache.php`. Pode definir várias,
 | `redis_prefix` | `cacheer` | Prefixo das chaves no Redis, para o backend `redis`. |
 | `prefix` | `cache.prefix` | O espaço de chaves isolado da store. Consulte [prefixo](#prefixo). |
 | `fallback` | nenhum | Um backend a usar enquanto o principal está em baixo: o nome de um backend, como `'file'`, ou um array de backend completo. |
-| `l1` | nenhum | Manter cópias no processo à frente da store: um número de segundos (a idade máxima) ou `true` para 60. |
+| `l1` | nenhum | Manter cópias no processo à frente da store: um número de segundos (a idade máxima) ou `true` para 60. `0` desliga-a. |
 | `encryption` | nenhum | `['active' => id, 'passphrases' => [id => passphrase]]`. |
-| `compress` | `false` | `true`, ou um nível de gzip de 1 a 9. |
-| `max_value_bytes` | nenhum | Rejeitar valores maiores na escrita e na leitura. |
+| `compress` | `false` | `true`, ou um nível de gzip de 1 a 9. `0` desliga-a. |
+| `max_value_bytes` | nenhum | Rejeitar valores maiores na escrita e na leitura. `0` significa sem limite. |
+
+`l1`, `compress` e `max_value_bytes` também aceitam strings numéricas, tal como `env()` as devolve, e uma string vazia, como uma variável por definir, mantém-nas desligadas. Um valor inválido é recusado quando a store é criada, com o nome da opção no erro.
 
 ## Backends
 
@@ -50,7 +52,14 @@ Servir a partir de outro backend enquanto o Redis está em baixo:
 ],
 ```
 
-As leituras e escritas passam para o fallback quando o Redis falha e voltam ao Redis quando ele recupera. Contadores e locks nunca passam para o fallback: durante a falha, recusam por segurança (o lock não é adquirido) em vez de entregarem um segundo lock não partilhado.
+As leituras e escritas passam para o fallback quando o Redis falha e voltam ao Redis quando ele recupera. Cada escrita também vai para o fallback, para que esteja pronto quando o Redis falhar; um fallback `file` acrescenta uma escrita em disco a cada escrita no cache.
+
+Contadores e locks nunca passam para o fallback, porque o fallback não os consegue partilhar com outros servidores:
+
+- Os locks recusam por segurança: `get()` devolve `false` em vez de entregar um segundo lock não partilhado. Os locks tentam sempre o Redis, mesmo enquanto os valores são servidos pelo fallback, por isso defina um `timeout` curto na ligação Redis para que uma tentativa de lock não espere muito.
+- `Cache::add()`, `increment()` e `decrement()` lançam `StoreOperationFailedException`. Os rate limiters usam-nos, por isso as rotas com limite falham durante a falha; consulte [contadores e locks durante uma falha](./limitations.md#contadores-e-locks-durante-uma-falha).
+
+Prefira um fallback `file` ou `database`. Um fallback `array` vive na memória de cada worker e guarda uma cópia de cada chave escrita, incluindo as chaves guardadas para sempre.
 
 O estado do failover vive em cada processo PHP. Um processo de longa duração (um worker Octane ou de filas) lembra-se das chaves que alterou durante a falha e invalida-as no Redis antes de voltar a usá-lo. Um processo que termina não o faz: com PHP-FPM, cada pedido é um processo, por isso um valor alterado ou apagado durante uma falha pode voltar a ser servido pelo Redis depois de este recuperar, até expirar. Se isso for importante, use TTLs curtos para esses dados ou execute `php artisan cache:clear` quando o Redis voltar. Consulte [stores resilientes](../guias/store-resiliente.md) para ver como funciona o circuit breaker.
 
@@ -67,7 +76,7 @@ Manter os valores recentes na memória do processo, à frente da store partilhad
 ],
 ```
 
-Compensa em workers de longa duração, como Octane e workers de filas; com PHP-FPM, as cópias duram um pedido. `Cache::flush()` chega a todos os workers na sua verificação de coerência seguinte, no máximo cinco segundos depois. Uma alteração a uma única chave feita por outro worker é vista, no máximo, ao fim da idade `l1`. Os locks leem sempre a store partilhada, nunca uma cópia local. Consulte [cache em camadas](../guias/cache-em-camadas.md).
+Compensa em workers de longa duração, como Octane e workers de filas; com PHP-FPM, as cópias duram um pedido. `Cache::flush()` chega a todos os workers na sua verificação de coerência seguinte, no máximo cinco segundos depois. Uma alteração a uma única chave feita por outro worker é vista, no máximo, ao fim da idade `l1`. As cópias expiradas são removidas no máximo uma vez por minuto, por isso um worker não guarda todas as chaves que leu. Os locks leem sempre a store partilhada, nunca uma cópia local. Consulte [cache em camadas](../guias/cache-em-camadas.md).
 
 ## Criptografia e compressão
 
@@ -84,7 +93,14 @@ Compensa em workers de longa duração, como Octane e workers de filas; com PHP-
 ],
 ```
 
-Os valores são cifrados com AES-256-GCM e autenticados antes de serem lidos. As chaves não são cifradas, por isso não coloque segredos nas chaves de cache. Para rodar a chave, adicione uma nova passphrase, torne-a `active` e mantenha a antiga até as suas entradas expirarem. Uma passphrase vazia, como um `CACHEER_KEY` por definir, é recusada quando a store é criada, em vez de ser usada. Consulte [criptografia e compressão](../guias/criptografia-e-compressao.md).
+Os valores são cifrados com AES-256-GCM e autenticados antes de serem lidos. As chaves não são cifradas, por isso não coloque segredos nas chaves de cache.
+
+Use uma passphrase aleatória, não uma fácil de memorizar: a chave de cifra é o seu hash SHA-256, sem salt nem iterações, por isso uma passphrase previsível pode ser descoberta testando candidatas. Gere uma com:
+
+```sh
+php -r 'echo base64_encode(random_bytes(32)), PHP_EOL;'
+```
+ Para rodar a chave, adicione uma nova passphrase, torne-a `active` e mantenha a antiga até as suas entradas expirarem. Uma passphrase vazia, como um `CACHEER_KEY` por definir, é recusada quando a store é criada, em vez de ser usada. Consulte [criptografia e compressão](../guias/criptografia-e-compressao.md).
 
 ## Prefixo
 
@@ -92,8 +108,11 @@ Tal como as stores do Laravel, uma store `cacheer` usa a sua opção `prefix` ou
 
 - `Cache::flush()` limpa apenas esse espaço de chaves. Outras aplicações e stores que partilhem o backend mantêm as suas entradas.
 - A correspondência é literal: limpar `app_1` nunca afeta `app_10`.
+- Os locks em uso mantêm-se. Os registos de lock ficam ao lado do espaço de chaves, por isso `Cache::flush()` e `php artisan cache:clear` durante um deploy não libertam os locks de jobs ou tarefas agendadas em execução.
 
-Com um prefixo vazio, `Cache::flush()` limpa todo o espaço de chaves dessa store no backend.
+Com um prefixo vazio, `Cache::flush()` limpa todo o espaço de chaves dessa store no backend, incluindo os locks.
+
+Um prefixo não pode conter `/` nem caracteres de controlo, nem ter mais de 255 bytes. Um prefixo assim é recusado quando a store é criada.
 
 ## Relógio
 

@@ -16,7 +16,16 @@ If a section of code takes many locks per request, measure it before switching.
 
 ## Counters are whole numbers
 
-`Cache::increment('visits', 1.5)` throws `InvalidArgumentException` instead of truncating the amount, and incrementing a value that is not an integer fails without changing it.
+`Cache::increment('visits', 1.5)` throws `InvalidArgumentException` instead of truncating the amount, and incrementing a value that is not an integer fails without changing it. That includes a numeric string, such as `'5'` stored with `Cache::put()`, which Laravel's Redis and database stores would increment. Store counters as integers, or create them with `increment()`.
+
+## Counters and locks during an outage
+
+While the primary backend is down, its counters and locks are unavailable, even with a [fallback](./configuration.md#failover): a counter or lock held in the fallback would not be shared with other servers.
+
+- Locks are not acquired: `get()` returns `false`.
+- `Cache::add()`, `increment()`, and `decrement()` throw `StoreOperationFailedException`.
+
+Laravel's rate limiters use `add()` and `increment()`, so routes behind the `throttle` middleware fail until the primary recovers. If they must keep working, point `cache.limiter` in `config/cache.php` at a store that does not depend on the same backend.
 
 ## Keys
 
@@ -26,9 +35,9 @@ Keys are at most 1024 bytes and cannot contain control characters. Longer or inv
 
 The redis backend opens its own connection from the settings of the Laravel connection you name. It ignores Laravel's redis `prefix`, `serializer`, and `compression` options, and Redis clusters are not supported. See [configuration](./configuration.md#backends).
 
-## Database connections in long-running workers
+## Database transactions
 
-The database backend uses the PDO connection of the Laravel connection when the store is first used. In a long-running worker, a connection that Laravel later reconnects is not followed by the store; restart workers after a database failover.
+The database backend uses the connection you name in `connection`, and follows it when Laravel reconnects. Cache writes and lock records made inside `DB::transaction()` on that connection belong to the transaction: they are rolled back with it, and other processes see them only once it commits. To keep the cache independent of your transactions, define a second connection to the same database and name it in `connection`.
 
 ## Failover is per process
 

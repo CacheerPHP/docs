@@ -1,14 +1,14 @@
 # Contributing to CacheerPHP for Laravel
 
 Open an issue or pull request in
-[CacheerPHP/cacheerphp-laravel](https://github.com/CacheerPHP/cacheerphp-laravel).
+[CacheerPHP/laravel](https://github.com/CacheerPHP/laravel).
 The driver supports PHP 8.3+ and Laravel 12 or 13.
 
 ## Setup and checks
 
 ```sh
-git clone https://github.com/CacheerPHP/cacheerphp-laravel.git
-cd cacheerphp-laravel
+git clone https://github.com/CacheerPHP/laravel.git
+cd laravel
 composer install
 composer test
 ```

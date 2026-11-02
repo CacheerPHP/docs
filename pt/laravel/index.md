@@ -35,5 +35,5 @@ A exceção é `Cache::tags()`; consulte [diferenças e limitações](./limitati
 - [Instalação](./installation.md): instalar o pacote, ver como correm as suas stores e adicionar uma store `cacheer`.
 - [Configuração](./configuration.md): encaminhamento, backends, failover, cache em camadas, criptografia e prefixos.
 - [Funcionalidades do Laravel](./framework-features.md): locks, filas, scheduler, rate limits e testes.
-- [Diferenças e limitações](./limitations.md): o que se comporta de forma diferente das stores nativas do Laravel, nas stores encaminhadas e no driver `cacheer`, e a atualização a partir do pacote 0.1.
+- [Diferenças e limitações](./limitations.md): o que se comporta de forma diferente das stores nativas do Laravel, nas stores encaminhadas e no driver `cacheer`.
 - [Contribuir](../contribuicao/laravel.md): preparação, verificações do pacote e testes de integração Redis.

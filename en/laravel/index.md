@@ -35,5 +35,5 @@ A few stores stay native, because routing could not reproduce them exactly; see 
 - [Installation](./installation.md): install the package, check how your stores run, and add a `cacheer` store.
 - [Configuration](./configuration.md): routing, backends, failover, tiered caching, encryption, and prefixes.
 - [Laravel features](./framework-features.md): locks, queues, the scheduler, rate limits, and testing.
-- [Differences and limitations](./limitations.md): what behaves differently from Laravel's built-in stores, on routed stores and on the `cacheer` driver, and upgrading from the 0.1 package.
+- [Differences and limitations](./limitations.md): what behaves differently from Laravel's built-in stores, on routed stores and on the `cacheer` driver.
 - [Contributing](../contributing/laravel.md): development setup, package checks, and Redis integration tests.

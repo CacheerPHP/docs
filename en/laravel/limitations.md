@@ -55,12 +55,3 @@ A process that ends during an outage forgets the keys it changed, so under PHP-F
 ## Cached `null`
 
 Laravel's repository treats `null` as a miss, whatever the store. `Cache::put('key', null)` followed by `Cache::get('key', 'default')` returns `'default'`. The injected CacheerPHP contract does distinguish a cached `null` from a miss, through `entry()`.
-
-## Upgrading from silviooosilva/cacheerphp-laravel 0.1
-
-The 0.1 package wrapped CacheerPHP 4 and 5 behind its own `Cacheer` facade. `cacheerphp/laravel` replaces it with a cache driver:
-
-- Replace `Cacheer::putCache()` and `Cacheer::getCache()` with `Cache::put()` and `Cache::get()`, or with the injected CacheerPHP contract.
-- Move the settings from `config/cacheer.php` into a `cacheer` store in `config/cache.php`.
-- The `cacheer:monitor`, `cacheer:events-clear`, and `cacheer:diagnostics` commands are gone. Use [Cacheer Monitor](../cacheer-monitor/index.md) and the [`cacheer` CLI](../guides/cli.md) that ships with CacheerPHP.
-- CacheerPHP 6 cannot read data written by CacheerPHP 5. Start with an empty cache, for example under a new `prefix`. See [migrating from v5](../updating/v5-migration.md).

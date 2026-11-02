@@ -55,12 +55,3 @@ Um processo que termina durante uma falha esquece as chaves que alterou, por iss
 ## `null` em cache
 
 O repositório do Laravel trata `null` como um miss, seja qual for a store. `Cache::put('key', null)` seguido de `Cache::get('key', 'default')` devolve `'default'`. O contrato do CacheerPHP injetado distingue um `null` guardado de um miss, através de `entry()`.
-
-## Atualizar a partir de silviooosilva/cacheerphp-laravel 0.1
-
-O pacote 0.1 envolvia o CacheerPHP 4 e 5 numa facade `Cacheer` própria. O `cacheerphp/laravel` substitui-o por um driver de cache:
-
-- Substitua `Cacheer::putCache()` e `Cacheer::getCache()` por `Cache::put()` e `Cache::get()`, ou pelo contrato do CacheerPHP injetado.
-- Passe as definições de `config/cacheer.php` para uma store `cacheer` em `config/cache.php`.
-- Os comandos `cacheer:monitor`, `cacheer:events-clear` e `cacheer:diagnostics` deixaram de existir. Use o [Cacheer Monitor](../cacheer-monitor/index.md) e a [CLI `cacheer`](../guias/cli.md) incluída no CacheerPHP.
-- O CacheerPHP 6 não lê dados escritos pelo CacheerPHP 5. Comece com um cache vazio, por exemplo com um novo `prefix`. Consulte a [migração a partir da v5](../atualizacao/v5-migration.md).
